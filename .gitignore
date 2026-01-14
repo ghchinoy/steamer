@@ -1,0 +1,32 @@
+# Binaries
+steamer
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Logs
+*.log
+drivectl-mcp.log
+
+# Env / Secrets
+.env
+*.env
+*.yaml
+!steamer.yaml.sample
+
+# OS
+.DS_Store
+
+# Go
+vendor/
+go.work
+go.work.sum
+
+# IDEs
+.idea/
+.vscode/
+
+# Project Specific
+.genkit/

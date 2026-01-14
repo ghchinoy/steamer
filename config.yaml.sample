@@ -1,0 +1,8 @@
+# steamer configuration file
+# Definitive location: ~/.config/steamer/config.yaml
+
+# Your Porkbun API Key
+apikey: pk1_your_api_key_here
+
+# Your Porkbun Secret API Key
+secretapikey: sk1_your_secret_key_here
