@@ -78,6 +78,10 @@ func (c *Client) post(endpoint string, body interface{}, result interface{}) err
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		var apiErr APIResponse
+		if err := json.Unmarshal(respBody, &apiErr); err == nil && apiErr.Message != "" {
+			return fmt.Errorf("api error: %s", apiErr.Message)
+		}
 		return fmt.Errorf("api error: %s (status %d)", string(respBody), resp.StatusCode)
 	}
 

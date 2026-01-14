@@ -41,9 +41,9 @@ var listRecordsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		fmt.Printf("% -10s % -25s % -10s % -30s\n", "ID", "NAME", "TYPE", "CONTENT")
+		fmt.Printf("%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
 		for _, r := range records {
-			fmt.Printf("% -10s % -25s % -10s % -30s\n", r.ID, r.Name, r.Type, r.Content)
+			fmt.Printf("%-10v %-25s %-10s %-30s\n", r.ID, r.Name, r.Type, r.Content)
 		}
 	},
 }

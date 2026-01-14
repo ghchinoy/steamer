@@ -17,13 +17,13 @@ package porkbun
 import "fmt"
 
 type DNSRecord struct {
-	ID      string `json:"id"`
-	Name    string `json:"name"`
-	Type    string `json:"type"`
-	Content string `json:"content"`
-	TTL     string `json:"ttl"`
-	Prio    string `json:"prio"`
-	Notes   string `json:"notes"`
+	ID      interface{} `json:"id"`
+	Name    string      `json:"name"`
+	Type    string      `json:"type"`
+	Content string      `json:"content"`
+	TTL     string      `json:"ttl"`
+	Prio    string      `json:"prio"`
+	Notes   string      `json:"notes"`
 }
 
 type RetrieveDNSResponse struct {
@@ -42,7 +42,7 @@ type CreateRecordRequest struct {
 
 type CreateRecordResponse struct {
 	APIResponse
-	ID string `json:"id"`
+	ID interface{} `json:"id"`
 }
 
 func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
@@ -70,9 +70,13 @@ func (c *Client) CreateRecord(domain string, record CreateRecordRequest) (string
 		return "", err
 	}
 	if res.Status != "SUCCESS" {
-		return "", fmt.Errorf("create record failed: %s", res.Message)
+		msg := res.Message
+		if msg == "" {
+			msg = "unknown error"
+		}
+		return "", fmt.Errorf("api error: %s", msg)
 	}
-	return res.ID, nil
+	return fmt.Sprintf("%v", res.ID), nil
 }
 
 func (c *Client) DeleteRecord(domain, id string) error {

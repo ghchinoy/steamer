@@ -145,7 +145,7 @@ func (m Model) View() string {
 		s += fmt.Sprintf("DNS Records for %s:\n\n", m.domain)
 		s += fmt.Sprintf("%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
 		for i, r := range m.records {
-			line := fmt.Sprintf("%-10s %-25s %-10s %-30s", r.ID, r.Name, r.Type, r.Content)
+			line := fmt.Sprintf("%-10v %-25s %-10s %-30s", r.ID, r.Name, r.Type, r.Content)
 			if m.cursor == i {
 				s += selectedStyle.Render("> "+line) + "\n"
 			} else {

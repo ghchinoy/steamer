@@ -19,17 +19,37 @@ For full workflow details: `bd prime`
 
 ### 🧩 Handling Inconsistent API Types
 
-The Porkbun API (and potentially others) may return fields like `autoRenew` or `notLocal` as either a `string` ("0") or a `number` (0) depending on the account state or endpoint.
+
+
+The Porkbun API (and potentially others) may return fields like `autoRenew`, `notLocal`, or even record `id`s as either a `string` ("123") or a `number` (123) depending on the account state or endpoint.
+
+
 
 - **Pattern:** Use `interface{}` in Go structs for these fields to prevent unmarshaling errors.
 
+
+
 - **Example:**
+
+
 
   ```go
 
-  AutoRenew interface{} `json:"autoRenew"`
+
+
+  ID interface{} `json:"id"`
+
+
 
   ```
+
+
+
+- **Formatting:** Use `%v` in `fmt.Sprintf` or `fmt.Printf` to safely handle `interface{}` values that might contain strings or integers.
+
+
+
+
 
 
 
