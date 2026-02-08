@@ -103,15 +103,18 @@ When using `fmt.Sprintf` for TUI tables (e.g., in Bubble Tea), ensure format str
 
 
 
-### ⚠️ Configuration Syntax Pitfalls
+### 📦 Go Module Paths and `go install`
 
+- **Pattern:** For tools intended to be installed via `go install github.com/user/repo@latest`, the `module` path in `go.mod` MUST match the repository path.
+- **Problem:** If `go.mod` declares `module steamer` but is hosted at `github.com/ghchinoy/steamer`, `go install` will fail with a version constraints conflict.
+- **Fix:** Ensure `module github.com/ghchinoy/steamer` is used in `go.mod` and all internal imports are updated accordingly.
 
+### 🧹 Linting and Style
 
-- **Insight:** Users often accidentally use `.env` syntax (`KEY=VALUE`) in YAML files.
-
-
-
-- **Pattern:** When config loading fails or returns empty values, include a "Syntax Check" hint in error messages to remind the user to use YAML colons (`key: value`).
+- **Tooling:** Use `golangci-lint` with a comprehensive set of linters (including `revive`, `govet`, `staticcheck`, `errcheck`) to maintain high code quality.
+- **Documentation:** All exported symbols (types, functions, methods) and packages must have documentation comments to comply with Google Go style.
+- **Error Handling (Defer):** To satisfy `errcheck` for `resp.Body.Close()` without complex error handling in a defer, use an anonymous function: `defer func() { _ = resp.Body.Close() }()`.
+- **Error Strings:** In Go, error strings should be lowercase and not end with punctuation (e.g., `fmt.Errorf("api error: %s", msg)`).
 
 
 

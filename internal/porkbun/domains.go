@@ -14,6 +14,7 @@
 
 package porkbun
 
+// Domain represents a domain registered with Porkbun.
 type Domain struct {
 	Domain       string      `json:"domain"`
 	Status       string      `json:"status"`
@@ -27,23 +28,27 @@ type Domain struct {
 	Labels       []Label     `json:"labels"`
 }
 
+// Label represents a user-defined label in Porkbun.
 type Label struct {
 	ID    string `json:"id"`
 	Title string `json:"title"`
 	Color string `json:"color"`
 }
 
+// ListDomainsRequest is the request body for listing all domains.
 type ListDomainsRequest struct {
 	BaseRequest
 	Start         string `json:"start,omitempty"`
 	IncludeLabels string `json:"includeLabels,omitempty"`
 }
 
+// ListDomainsResponse is the response from the listAll domains endpoint.
 type ListDomainsResponse struct {
 	APIResponse
 	Domains []Domain `json:"domains"`
 }
 
+// ListDomains fetches all domains in the user's Porkbun account.
 func (c *Client) ListDomains() ([]Domain, error) {
 	req := ListDomainsRequest{
 		BaseRequest: BaseRequest{

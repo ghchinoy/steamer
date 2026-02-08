@@ -16,6 +16,7 @@ package porkbun
 
 import "fmt"
 
+// DNSRecord represents a single DNS record in Porkbun.
 type DNSRecord struct {
 	ID      interface{} `json:"id"`
 	Name    string      `json:"name"`
@@ -26,11 +27,13 @@ type DNSRecord struct {
 	Notes   string      `json:"notes"`
 }
 
+// RetrieveDNSResponse is the response from the DNS retrieve endpoint.
 type RetrieveDNSResponse struct {
 	APIResponse
 	Records []DNSRecord `json:"records"`
 }
 
+// CreateRecordRequest is the request body for creating a DNS record.
 type CreateRecordRequest struct {
 	BaseRequest
 	Name    string `json:"name"`
@@ -40,11 +43,13 @@ type CreateRecordRequest struct {
 	Prio    string `json:"prio,omitempty"`
 }
 
+// CreateRecordResponse is the response from the DNS create endpoint.
 type CreateRecordResponse struct {
 	APIResponse
 	ID interface{} `json:"id"`
 }
 
+// RetrieveRecords fetches all DNS records for the given domain.
 func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
 	req := BaseRequest{
 		APIKey:       c.APIKey,
@@ -59,10 +64,11 @@ func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
 	return res.Records, nil
 }
 
+// CreateRecord creates a new DNS record for the given domain.
 func (c *Client) CreateRecord(domain string, record CreateRecordRequest) (string, error) {
 	record.APIKey = c.APIKey
 	record.SecretAPIKey = c.SecretAPIKey
-	
+
 	var res CreateRecordResponse
 	endpoint := fmt.Sprintf("dns/create/%s", domain)
 	err := c.post(endpoint, record, &res)
@@ -79,6 +85,7 @@ func (c *Client) CreateRecord(domain string, record CreateRecordRequest) (string
 	return fmt.Sprintf("%v", res.ID), nil
 }
 
+// DeleteRecord deletes the specified DNS record from the given domain.
 func (c *Client) DeleteRecord(domain, id string) error {
 	req := BaseRequest{
 		APIKey:       c.APIKey,

@@ -17,8 +17,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"steamer/internal/porkbun"
-	"steamer/internal/tui"
+
+	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
@@ -37,8 +38,8 @@ var tuiCmd = &cobra.Command{
 		}
 
 		client := porkbun.NewClient(apiKey, secretKey)
-		
-p := tea.NewProgram(tui.NewModel(client, domainFlag))
+
+		p := tea.NewProgram(tui.NewModel(client, domainFlag))
 		if _, err := p.Run(); err != nil {
 			fmt.Printf("Error running TUI: %v\n", err)
 			os.Exit(1)

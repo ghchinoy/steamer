@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package cmd provides the command-line interface for steamer.
 package cmd
 
 import (
@@ -32,6 +33,8 @@ var rootCmd = &cobra.Command{
 	Long:  `steamer is a CLI tool built with Go, Cobra, and Bubble Tea to manage your Porkbun domains and DNS records.`,
 }
 
+// Execute adds all child commands to the root command and sets flags appropriately.
+// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
@@ -57,7 +60,7 @@ func initConfig() {
 	} else {
 		// 2. Setup XDG-style config path
 		home, _ := os.UserHomeDir()
-		
+
 		// Priority 1: ~/.config/steamer (XDG standard, common on macOS for CLI)
 		viper.AddConfigPath(filepath.Join(home, ".config", "steamer"))
 
@@ -66,12 +69,12 @@ func initConfig() {
 		if err == nil {
 			viper.AddConfigPath(filepath.Join(configHome, "steamer"))
 		}
-		
+
 		// Priority 3: $HOME (Legacy/simple)
 		viper.AddConfigPath(home)
 
 		viper.SetConfigType("yaml")
-		
+
 		// Try 'config' first (idiomatic), then 'steamer' (fallback)
 		viper.SetConfigName("config")
 		if err := viper.ReadInConfig(); err != nil {
@@ -112,7 +115,7 @@ func getClientConfig() (string, string, error) {
 	}
 
 	if apiKey == "" || secretKey == "" {
-		return "", "", fmt.Errorf("Porkbun API Key and Secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables")
+		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables")
 	}
 
 	return apiKey, secretKey, nil

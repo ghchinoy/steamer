@@ -17,7 +17,8 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"steamer/internal/porkbun"
+
+	"github.com/ghchinoy/steamer/internal/porkbun"
 
 	"github.com/spf13/cobra"
 )

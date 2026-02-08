@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package tui provides the terminal user interface for steamer.
 package tui
 
 import (
 	"fmt"
-	"steamer/internal/porkbun"
+
+	"github.com/ghchinoy/steamer/internal/porkbun"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -41,18 +43,20 @@ const (
 	viewRecords
 )
 
+// Model is the Bubble Tea model for the steamer TUI.
 type Model struct {
-	client    *porkbun.Client
-	state     state
-	domains   []porkbun.Domain
-	records   []porkbun.DNSRecord
-	cursor    int
-	selected  int
-	err       error
-	loading   bool
-	domain    string // currently viewed domain
+	client   *porkbun.Client
+	state    state
+	domains  []porkbun.Domain
+	records  []porkbun.DNSRecord
+	cursor   int
+	selected int
+	err      error
+	loading  bool
+	domain   string // currently viewed domain
 }
 
+// NewModel creates a new TUI model.
 func NewModel(client *porkbun.Client, initialDomain string) Model {
 	return Model{
 		client:  client,
@@ -63,6 +67,7 @@ func NewModel(client *porkbun.Client, initialDomain string) Model {
 	}
 }
 
+// Init initializes the TUI.
 func (m Model) Init() tea.Cmd {
 	if m.domain != "" {
 		return m.fetchRecords(m.domain)
@@ -70,6 +75,7 @@ func (m Model) Init() tea.Cmd {
 	return m.fetchDomains
 }
 
+// Update handles messages and updates the model.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -118,6 +124,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+// View renders the TUI.
 func (m Model) View() string {
 	if m.err != nil {
 		return fmt.Sprintf("Error: %v\n\nPress q to quit.", m.err)

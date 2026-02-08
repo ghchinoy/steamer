@@ -14,7 +14,8 @@ drivectl-mcp.log
 .env
 *.env
 *.yaml
-!steamer.yaml.sample
+!config.yaml.sample
+!.golangci.yml
 
 # OS
 .DS_Store
@@ -30,3 +31,5 @@ go.work.sum
 
 # Project Specific
 .genkit/
+.beads/.jsonl.lock
+*.bck.*
