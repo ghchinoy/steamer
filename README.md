@@ -74,6 +74,9 @@ steamer list-domains
 # See records for a specific domain
 steamer list-records aaie.cloud
 
+# Add an A record
+steamer add-a aaie.cloud home 1.2.3.4
+
 # Add a CNAME in a flash
 steamer add-cname aaie.cloud blog ghs.google.com
 ```
