@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -23,9 +24,18 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var listDomainsJSON bool
+
 var listDomainsCmd = &cobra.Command{
-	Use:   "list-domains",
-	Short: "List all domains in your Porkbun account",
+	Use:     "list-domains",
+	Short:   "List all domains in your Porkbun account",
+	GroupID: GroupInfo,
+	Long:    `Retrieves and displays a list of all domains associated with your Porkbun account, including their current status and expiration dates.`,
+	Example: `  # List domains in a table
+  steamer list-domains
+
+  # Output domains as JSON for scripting
+  steamer list-domains --json`,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {
@@ -40,6 +50,16 @@ var listDomainsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		if listDomainsJSON {
+			b, err := json.MarshalIndent(domains, "", "  ")
+			if err != nil {
+				fmt.Printf("Error encoding JSON: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println(string(b))
+			return
+		}
+
 		fmt.Printf("%-25s %-10s %-10s %-20s\n", "DOMAIN", "STATUS", "TLD", "EXPIRATION")
 		for _, d := range domains {
 			fmt.Printf("%-25s %-10s %-10s %-20s\n", d.Domain, d.Status, d.TLD, d.ExpireDate)
@@ -48,5 +68,6 @@ var listDomainsCmd = &cobra.Command{
 }
 
 func init() {
+	listDomainsCmd.Flags().BoolVar(&listDomainsJSON, "json", false, "Output results in JSON format")
 	rootCmd.AddCommand(listDomainsCmd)
 }

@@ -24,9 +24,16 @@ import (
 )
 
 var addAaaaCmd = &cobra.Command{
-	Use:   "add-aaaa [domain] [subdomain] [ip]",
-	Short: "Add a new AAAA record to a domain",
-	Args:  cobra.ExactArgs(3),
+	Use:     "add-aaaa [domain] [subdomain] [ip]",
+	Short:   "Add a new AAAA record to a domain",
+	GroupID: GroupManagement,
+	Long:    `Creates a new IPv6 'AAAA' record for the specified domain and subdomain. Use an empty string "" for the root domain.`,
+	Example: `  # Add an AAAA record for ipv6.aaie.cloud
+  steamer add-aaaa aaie.cloud ipv6 2001:db8::1
+
+  # Add an AAAA record for the root domain (aaie.cloud)
+  steamer add-aaaa aaie.cloud "" 2001:db8::1`,
+	Args: cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {

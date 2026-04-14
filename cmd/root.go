@@ -27,6 +27,12 @@ import (
 
 var cfgFile string
 
+const (
+	GroupInfo       = "info"
+	GroupManagement = "management"
+	GroupTUI        = "tui"
+)
+
 var rootCmd = &cobra.Command{
 	Use:   "steamer",
 	Short: "A CLI for managing Porkbun domains",
@@ -44,6 +50,19 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    GroupInfo,
+		Title: "Information Commands:",
+	})
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    GroupManagement,
+		Title: "Record Management Commands:",
+	})
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    GroupTUI,
+		Title: "Interactive Commands:",
+	})
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/steamer/config.yaml)")
 
@@ -115,7 +134,7 @@ func getClientConfig() (string, string, error) {
 	}
 
 	if apiKey == "" || secretKey == "" {
-		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables")
+		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables\nHint: Create a config file at ~/.config/steamer/config.yaml or set PORKBUN_APIKEY and PORKBUN_SECRETAPIKEY environment variables.")
 	}
 
 	return apiKey, secretKey, nil

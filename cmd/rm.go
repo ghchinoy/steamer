@@ -23,9 +23,13 @@ import (
 )
 
 var rmCmd = &cobra.Command{
-	Use:   "rm [domain] [record-id]",
-	Short: "Remove a DNS record from a domain using its ID",
-	Args:  cobra.ExactArgs(2),
+	Use:     "rm [domain] [record-id]",
+	Short:   "Remove a DNS record from a domain using its ID",
+	GroupID: GroupManagement,
+	Long:    `Deletes a specific DNS record from your Porkbun domain. You must provide the exact record ID, which can be found using the 'list-records' command.`,
+	Example: `  # Delete record ID 123456789 from aaie.cloud
+  steamer rm aaie.cloud 123456789`,
+	Args: cobra.ExactArgs(2),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {

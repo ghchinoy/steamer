@@ -24,9 +24,13 @@ import (
 )
 
 var addCnameCmd = &cobra.Command{
-	Use:   "add-cname [domain] [subdomain] [target]",
-	Short: "Add a new CNAME record to a domain",
-	Args:  cobra.ExactArgs(3),
+	Use:     "add-cname [domain] [subdomain] [target]",
+	Short:   "Add a new CNAME record to a domain",
+	GroupID: GroupManagement,
+	Long:    `Creates a new CNAME record for the specified domain and subdomain, pointing it to a target hostname.`,
+	Example: `  # Alias blog.aaie.cloud to ghs.google.com
+  steamer add-cname aaie.cloud blog ghs.google.com`,
+	Args: cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {

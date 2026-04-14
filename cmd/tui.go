@@ -28,8 +28,15 @@ import (
 var domainFlag string
 
 var tuiCmd = &cobra.Command{
-	Use:   "tui",
-	Short: "Start the interactive TUI",
+	Use:     "tui",
+	Short:   "Start the interactive TUI",
+	GroupID: GroupTUI,
+	Long:    `Starts a rich, interactive terminal UI built with Bubble Tea. Use the TUI to visually browse your domains and inspect their DNS records without needing to run separate commands.`,
+	Example: `  # Start the default TUI
+  steamer tui
+
+  # Start the TUI directly focused on a specific domain
+  steamer tui -d aaie.cloud`,
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {

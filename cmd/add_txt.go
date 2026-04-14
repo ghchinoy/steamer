@@ -24,9 +24,16 @@ import (
 )
 
 var addTxtCmd = &cobra.Command{
-	Use:   "add-txt [domain] [subdomain] [text]",
-	Short: "Add a new TXT record to a domain",
-	Args:  cobra.ExactArgs(3),
+	Use:     "add-txt [domain] [subdomain] [text]",
+	Short:   "Add a new TXT record to a domain",
+	GroupID: GroupManagement,
+	Long:    `Creates a new TXT record for the specified domain and subdomain. TXT records are commonly used for domain verification, SPF, and DMARC.`,
+	Example: `  # Add a DMARC record
+  steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
+
+  # Add a Google site verification record to the root domain
+  steamer add-txt aaie.cloud "" "google-site-verification=abc123xyz"`,
+	Args: cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {

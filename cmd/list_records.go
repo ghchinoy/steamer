@@ -15,6 +15,7 @@
 package cmd
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -23,10 +24,19 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var listRecordsJSON bool
+
 var listRecordsCmd = &cobra.Command{
-	Use:   "list-records [domain]",
-	Short: "List DNS records for a specific domain",
-	Args:  cobra.ExactArgs(1),
+	Use:     "list-records [domain]",
+	Short:   "List DNS records for a specific domain",
+	GroupID: GroupInfo,
+	Long:    `Retrieves and displays all DNS records (A, CNAME, TXT, etc.) for the specified domain from your Porkbun account.`,
+	Example: `  # List records for aaie.cloud
+  steamer list-records aaie.cloud
+
+  # Output records as JSON
+  steamer list-records aaie.cloud --json`,
+	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {
@@ -42,6 +52,16 @@ var listRecordsCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		if listRecordsJSON {
+			b, err := json.MarshalIndent(records, "", "  ")
+			if err != nil {
+				fmt.Printf("Error encoding JSON: %v\n", err)
+				os.Exit(1)
+			}
+			fmt.Println(string(b))
+			return
+		}
+
 		fmt.Printf("%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
 		for _, r := range records {
 			fmt.Printf("%-10v %-25s %-10s %-30s\n", r.ID, r.Name, r.Type, r.Content)
@@ -50,5 +70,6 @@ var listRecordsCmd = &cobra.Command{
 }
 
 func init() {
+	listRecordsCmd.Flags().BoolVar(&listRecordsJSON, "json", false, "Output results in JSON format")
 	rootCmd.AddCommand(listRecordsCmd)
 }
