@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
 )
@@ -52,11 +53,11 @@ var addTxtCmd = &cobra.Command{
 			Content: text,
 		})
 		if err != nil {
-			fmt.Printf("Error creating TXT record: %v\n", err)
+			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating TXT record: %v", err)))
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully created TXT record for %s.%s with value %s (ID: %s)\n", subdomain, domain, text, id)
+		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created TXT record for %s.%s with value %s (ID: %s)", subdomain, domain, text, id)))
 	},
 }
 

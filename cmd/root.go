@@ -28,9 +28,12 @@ import (
 var cfgFile string
 
 const (
-	GroupInfo       = "info"
+	// GroupInfo is for commands that retrieve and display data.
+	GroupInfo = "info"
+	// GroupManagement is for commands that mutate DNS records.
 	GroupManagement = "management"
-	GroupTUI        = "tui"
+	// GroupTUI is for interactive terminal interface commands.
+	GroupTUI = "tui"
 )
 
 var rootCmd = &cobra.Command{
@@ -134,7 +137,7 @@ func getClientConfig() (string, string, error) {
 	}
 
 	if apiKey == "" || secretKey == "" {
-		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables\nHint: Create a config file at ~/.config/steamer/config.yaml or set PORKBUN_APIKEY and PORKBUN_SECRETAPIKEY environment variables.")
+		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables - hint: create a config file at ~/.config/steamer/config.yaml or set PORKBUN_APIKEY and PORKBUN_SECRETAPIKEY environment variables")
 	}
 
 	return apiKey, secretKey, nil

@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
 )
@@ -60,9 +61,23 @@ var listDomainsCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("%-25s %-10s %-10s %-20s\n", "DOMAIN", "STATUS", "TLD", "EXPIRATION")
+		fmt.Printf("%s %s %s %s\n",
+			theme.Accent.Render(fmt.Sprintf("%-25s", "DOMAIN")),
+			theme.Accent.Render(fmt.Sprintf("%-10s", "STATUS")),
+			theme.Accent.Render(fmt.Sprintf("%-10s", "TLD")),
+			theme.Accent.Render(fmt.Sprintf("%-20s", "EXPIRATION")),
+		)
 		for _, d := range domains {
-			fmt.Printf("%-25s %-10s %-10s %-20s\n", d.Domain, d.Status, d.TLD, d.ExpireDate)
+			statusColor := theme.Pass
+			if d.Status != "ACTIVE" {
+				statusColor = theme.Warn
+			}
+			fmt.Printf("%s %s %s %s\n",
+				fmt.Sprintf("%-25s", d.Domain),
+				statusColor.Render(fmt.Sprintf("%-10s", d.Status)),
+				theme.Muted.Render(fmt.Sprintf("%-10s", d.TLD)),
+				fmt.Sprintf("%-20s", d.ExpireDate),
+			)
 		}
 	},
 }

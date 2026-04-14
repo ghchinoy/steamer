@@ -20,6 +20,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
 )
@@ -62,9 +63,19 @@ var listRecordsCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Printf("%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
+		fmt.Printf("%s %s %s %s\n",
+			theme.Accent.Render(fmt.Sprintf("%-10s", "ID")),
+			theme.Accent.Render(fmt.Sprintf("%-25s", "NAME")),
+			theme.Accent.Render(fmt.Sprintf("%-10s", "TYPE")),
+			theme.Accent.Render(fmt.Sprintf("%-30s", "CONTENT")),
+		)
 		for _, r := range records {
-			fmt.Printf("%-10v %-25s %-10s %-30s\n", r.ID, r.Name, r.Type, r.Content)
+			fmt.Printf("%s %s %s %s\n",
+				theme.ID.Render(fmt.Sprintf("%-10v", r.ID)),
+				fmt.Sprintf("%-25s", r.Name),
+				theme.Muted.Render(fmt.Sprintf("%-10s", r.Type)),
+				fmt.Sprintf("%-30s", r.Content),
+			)
 		}
 	},
 }

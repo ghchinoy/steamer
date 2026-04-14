@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
 )
@@ -49,11 +50,11 @@ var addCnameCmd = &cobra.Command{
 			Content: target,
 		})
 		if err != nil {
-			fmt.Printf("Error creating CNAME record: %v\n", err)
+			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating CNAME record: %v", err)))
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully created CNAME record for %s.%s pointing to %s (ID: %s)\n", subdomain, domain, target, id)
+		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created CNAME record for %s.%s pointing to %s (ID: %s)", subdomain, domain, target, id)))
 	},
 }
 

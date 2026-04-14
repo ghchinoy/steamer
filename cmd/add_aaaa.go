@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
 )
@@ -52,11 +53,11 @@ var addAaaaCmd = &cobra.Command{
 			Content: ip,
 		})
 		if err != nil {
-			fmt.Printf("Error creating AAAA record: %v\n", err)
+			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating AAAA record: %v", err)))
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully created AAAA record for %s.%s pointing to %s (ID: %s)\n", subdomain, domain, ip, id)
+		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created AAAA record for %s.%s pointing to %s (ID: %s)", subdomain, domain, ip, id)))
 	},
 }
 

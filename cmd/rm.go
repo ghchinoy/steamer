@@ -19,6 +19,7 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 	"github.com/spf13/cobra"
 )
 
@@ -43,11 +44,11 @@ var rmCmd = &cobra.Command{
 		client := porkbun.NewClient(apiKey, secretKey)
 		err = client.DeleteRecord(domain, id)
 		if err != nil {
-			fmt.Printf("Error deleting record: %v\n", err)
+			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error deleting record: %v", err)))
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully deleted record %s from %s\n", id, domain)
+		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully deleted record %s from %s", id, domain)))
 	},
 }
 
