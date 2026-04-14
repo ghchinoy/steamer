@@ -77,8 +77,14 @@ steamer list-records aaie.cloud
 # Add an A record
 steamer add-a aaie.cloud home 1.2.3.4
 
+# Add an AAAA record
+steamer add-aaaa aaie.cloud home 2001:db8::1
+
 # Add a CNAME in a flash
 steamer add-cname aaie.cloud blog ghs.google.com
+
+# Add a TXT record
+steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
 ```
 
 ## 📚 Documentation
