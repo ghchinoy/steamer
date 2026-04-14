@@ -19,13 +19,14 @@ import (
 	"os"
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
+
 	"github.com/spf13/cobra"
 )
 
-var rmCmd = &cobra.Command{
-	Use:   "rm [domain] [record-id]",
-	Short: "Remove a DNS record from a domain using its ID",
-	Args:  cobra.ExactArgs(2),
+var addTxtCmd = &cobra.Command{
+	Use:   "add-txt [domain] [subdomain] [text]",
+	Short: "Add a new TXT record to a domain",
+	Args:  cobra.ExactArgs(3),
 	Run: func(cmd *cobra.Command, args []string) {
 		apiKey, secretKey, err := getClientConfig()
 		if err != nil {
@@ -34,19 +35,24 @@ var rmCmd = &cobra.Command{
 		}
 
 		domain := args[0]
-		id := args[1]
+		subdomain := args[1]
+		text := args[2]
 
 		client := porkbun.NewClient(apiKey, secretKey)
-		err = client.DeleteRecord(domain, id)
+		id, err := client.CreateRecord(domain, porkbun.CreateRecordRequest{
+			Name:    subdomain,
+			Type:    "TXT",
+			Content: text,
+		})
 		if err != nil {
-			fmt.Printf("Error deleting record: %v\n", err)
+			fmt.Printf("Error creating TXT record: %v\n", err)
 			os.Exit(1)
 		}
 
-		fmt.Printf("Successfully deleted record %s from %s\n", id, domain)
+		fmt.Printf("Successfully created TXT record for %s.%s with value %s (ID: %s)\n", subdomain, domain, text, id)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(rmCmd)
+	rootCmd.AddCommand(addTxtCmd)
 }
