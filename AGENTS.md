@@ -116,6 +116,27 @@ When using `fmt.Sprintf` for TUI tables (e.g., in Bubble Tea), ensure format str
 - **Error Handling (Defer):** To satisfy `errcheck` for `resp.Body.Close()` without complex error handling in a defer, use an anonymous function: `defer func() { _ = resp.Body.Close() }()`.
 - **Error Strings:** In Go, error strings should be lowercase and not end with punctuation (e.g., `fmt.Errorf("api error: %s", msg)`).
 
+### 🌐 Porkbun API DNS Limitations
+
+- **Record Limits:** A domain can have a maximum of 200 DNS records across all types.
+- **Root Record Conflicts:** The API will fail with a generic "We were unable to create the DNS record" if you try to add an `A` or `AAAA` record to the root (subdomain `""`) when a root `ALIAS` or `CNAME` record already exists. Ensure conflicting root alias records are deleted before adding IP-based root records.
+
+### 🤖 CLI Design Best Practices (A2A Standard)
+
+To ensure the CLI remains human-friendly and highly accessible to AI agents, `steamer` follows these best practices (adapted from the A2A CLI standard):
+
+- **Structured Discoverability:** Use `GroupID` in Cobra commands to categorize them in the `--help` output (e.g., `GroupInfo`, `GroupManagement`, `GroupTUI`).
+- **Three Pillars of Documentation:** Every command MUST have a `Short` description (action verb), a `Long` detailed explanation, and copy-pasteable `Example` blocks.
+- **Agent-First Interoperability:** Data-returning commands (like `list-domains`) MUST support a `--json` flag for deterministic, non-interactive parsing.
+- **Proactive Error Guidance:** Don't just fail on missing config; print a clear "Hint:" explaining exactly how to fix it (e.g., setting environment variables or creating a config file).
+- **Semantic Color Usage (Lipgloss):** Use the centralized `internal/theme` package rather than raw colors.
+  - `Accent`: Headers, landmarks (`#399ee6` / `#59c2ff`).
+  - `Pass`: Success states (`#86b300` / `#c2d94c`).
+  - `Warn`: Warnings, pending (`#f2ae49` / `#ffb454`).
+  - `Fail`: Errors (`#f07171` / `#f07178`).
+  - `Muted`: De-emphasis, types (`#828c99` / `#6c7680`).
+  - `ID`: Identifiers (`#46ba94` / `#95e6cb`).
+
 
 
 
