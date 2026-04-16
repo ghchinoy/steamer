@@ -14,6 +14,8 @@
 
 package porkbun
 
+import "fmt"
+
 // Domain represents a domain registered with Porkbun.
 type Domain struct {
 	Domain       string      `json:"domain"`
@@ -63,4 +65,27 @@ func (c *Client) ListDomains() ([]Domain, error) {
 		return nil, err
 	}
 	return res.Domains, nil
+}
+
+// DomainCheckResponse is the response from the checkDomain endpoint.
+type DomainCheckResponse struct {
+	APIResponse
+	Avail   string `json:"avail"`
+	Premium string `json:"premium"`
+	Price   string `json:"price"`
+}
+
+// CheckDomain checks the availability and pricing of a domain.
+func (c *Client) CheckDomain(domain string) (*DomainCheckResponse, error) {
+	req := BaseRequest{
+		APIKey:       c.APIKey,
+		SecretAPIKey: c.SecretAPIKey,
+	}
+	var res DomainCheckResponse
+	endpoint := fmt.Sprintf("domain/checkDomain/%s", domain)
+	err := c.post(endpoint, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
 }
