@@ -64,13 +64,13 @@ var searchCmd = &cobra.Command{
 		}
 
 		fmt.Printf("%s %s\n", theme.Accent.Render("Domain:"), domain)
-		if res.Avail == "yes" {
+		if res.Response.Avail == "yes" {
 			fmt.Printf("%s %s\n", theme.Pass.Render("Status:"), "Available")
-			if res.Price != "" {
-				fmt.Printf("%s %s\n", theme.Accent.Render("Price:"), "$"+res.Price)
+			if res.Response.Price != "" {
+				fmt.Printf("%s %s\n", theme.Accent.Render("Price:"), "$"+res.Response.Price)
 			}
 			isPremium := "No"
-			if res.Premium == "yes" {
+			if res.Response.Premium == "yes" {
 				isPremium = "Yes"
 			}
 			fmt.Printf("%s %s\n", theme.Accent.Render("Premium:"), isPremium)

@@ -67,12 +67,17 @@ func (c *Client) ListDomains() ([]Domain, error) {
 	return res.Domains, nil
 }
 
-// DomainCheckResponse is the response from the checkDomain endpoint.
-type DomainCheckResponse struct {
-	APIResponse
+// DomainPricing is the detailed pricing and availability information.
+type DomainPricing struct {
 	Avail   string `json:"avail"`
 	Premium string `json:"premium"`
 	Price   string `json:"price"`
+}
+
+// DomainCheckResponse is the response from the checkDomain endpoint.
+type DomainCheckResponse struct {
+	APIResponse
+	Response DomainPricing `json:"response"`
 }
 
 // CheckDomain checks the availability and pricing of a domain.
