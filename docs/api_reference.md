@@ -43,6 +43,24 @@ Verify API credentials and retrieve your IP address.
 
 ### Domain Check (Availability)
 - **Endpoint:** `https://api.porkbun.com/api/json/v3/domain/checkDomain/DOMAIN`
+- **Request:**
+```json
+{
+  "secretapikey": "YOUR_SECRET_API_KEY",
+  "apikey": "YOUR_API_KEY"
+}
+```
+- **Response:**
+```json
+{
+  "status": "SUCCESS",
+  "response": {
+    "avail": "yes",
+    "premium": "no",
+    "price": "10.37"
+  }
+}
+```
 - **Rate Limits:** Domain checks are rate-limited. Example: 1 check per 10 seconds.
 
 ### Glue Records

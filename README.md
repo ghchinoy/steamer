@@ -68,6 +68,9 @@ steamer tui -d aaie.cloud
 
 ### Command Line Interface
 ```bash
+# Check domain availability and pricing
+steamer search mynewidea.com
+
 # List all your domains
 steamer list-domains
 
