@@ -71,6 +71,12 @@ steamer tui -d aaie.cloud
 # Check domain availability and pricing
 steamer search mynewidea.com
 
+# Search a phrase against specific TLDs
+steamer search mynewidea --tlds com,dev,app
+
+# List all supported TLDs and their prices (cached)
+steamer list-tlds
+
 # List all your domains
 steamer list-domains
 

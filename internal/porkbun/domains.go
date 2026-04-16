@@ -1,17 +1,3 @@
-// Copyright 2026 Google LLC
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package porkbun
 
 import "fmt"
@@ -89,6 +75,33 @@ func (c *Client) CheckDomain(domain string) (*DomainCheckResponse, error) {
 	var res DomainCheckResponse
 	endpoint := fmt.Sprintf("domain/checkDomain/%s", domain)
 	err := c.post(endpoint, req, &res)
+	if err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// TLDPricing represents the pricing info for a single TLD.
+type TLDPricing struct {
+	Registration string `json:"registration"`
+	Renewal      string `json:"renewal"`
+	Transfer     string `json:"transfer"`
+}
+
+// PricingResponse is the response from the pricing/get endpoint.
+type PricingResponse struct {
+	APIResponse
+	Pricing map[string]TLDPricing `json:"pricing"`
+}
+
+// GetPricing retrieves pricing information for all supported TLDs.
+func (c *Client) GetPricing() (*PricingResponse, error) {
+	req := BaseRequest{
+		APIKey:       c.APIKey,
+		SecretAPIKey: c.SecretAPIKey,
+	}
+	var res PricingResponse
+	err := c.post("pricing/get", req, &res)
 	if err != nil {
 		return nil, err
 	}
