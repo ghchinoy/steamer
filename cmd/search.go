@@ -70,11 +70,11 @@ var searchCmd = &cobra.Command{
 		}
 
 		// Collect results sequentially to respect the 1-check-per-10s rate limit
-		var finalResults []struct {
+		finalResults := make([]struct {
 			Domain string
 			Res    *porkbun.DomainCheckResponse
 			Err    error
-		}
+		}, 0, len(domainsToCheck))
 
 		for i, d := range domainsToCheck {
 			if i > 0 {

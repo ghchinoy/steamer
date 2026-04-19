@@ -8,6 +8,9 @@ import (
 	"sort"
 	"time"
 
+	"github.com/charmbracelet/bubbles/table"
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/ghchinoy/steamer/internal/porkbun"
 	"github.com/ghchinoy/steamer/internal/theme"
 
@@ -60,20 +63,47 @@ var listTldsCmd = &cobra.Command{
 		}
 		sort.Strings(tlds)
 
-		fmt.Printf("%s %s %s %s\n",
-			theme.Accent.Render(fmt.Sprintf("%-15s", "TLD")),
-			theme.Accent.Render(fmt.Sprintf("%-15s", "REGISTRATION")),
-			theme.Accent.Render(fmt.Sprintf("%-15s", "RENEWAL")),
-			theme.Accent.Render(fmt.Sprintf("%-15s", "TRANSFER")),
-		)
+		columns := []table.Column{
+			{Title: "TLD", Width: 15},
+			{Title: "REGISTRATION", Width: 15},
+			{Title: "RENEWAL", Width: 15},
+			{Title: "TRANSFER", Width: 15},
+		}
+
+		var rows []table.Row
 		for _, tld := range tlds {
 			p := pricing[tld]
-			fmt.Printf("%s %s %s %s\n",
-				fmt.Sprintf("%-15s", "."+tld),
-				fmt.Sprintf("%-15s", "$"+p.Registration),
-				fmt.Sprintf("%-15s", "$"+p.Renewal),
-				fmt.Sprintf("%-15s", "$"+p.Transfer),
-			)
+			rows = append(rows, table.Row{
+				"." + tld,
+				"$" + p.Registration,
+				"$" + p.Renewal,
+				"$" + p.Transfer,
+			})
+		}
+
+		t := table.New(
+			table.WithColumns(columns),
+			table.WithRows(rows),
+			table.WithFocused(true),
+			table.WithHeight(20),
+		)
+
+		s := table.DefaultStyles()
+		s.Header = s.Header.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			BorderBottom(true).
+			Bold(false)
+		s.Selected = s.Selected.
+			Foreground(lipgloss.Color("229")).
+			Background(lipgloss.Color("57")).
+			Bold(false)
+		t.SetStyles(s)
+
+		m := tldTableModel{t}
+		if _, err := tea.NewProgram(m).Run(); err != nil {
+			fmt.Printf("Error running TUI: %v\n", err)
+			os.Exit(1)
 		}
 	},
 }
@@ -134,4 +164,27 @@ func init() {
 	listTldsCmd.Flags().BoolVar(&listTldsJSON, "json", false, "Output results in JSON format")
 	listTldsCmd.Flags().BoolVar(&listTldsForce, "force", false, "Force refresh the TLD cache")
 	rootCmd.AddCommand(listTldsCmd)
+}
+
+type tldTableModel struct {
+	table table.Model
+}
+
+func (m tldTableModel) Init() tea.Cmd { return nil }
+
+func (m tldTableModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "esc", "q", "ctrl+c":
+			return m, tea.Quit
+		}
+	}
+	m.table, cmd = m.table.Update(msg)
+	return m, cmd
+}
+
+func (m tldTableModel) View() string {
+	return "\n" + theme.Accent.Render("Porkbun TLD Pricing") + "\n\n" + m.table.View() + "\n\n  Press q or esc to quit.\n"
 }
