@@ -21,7 +21,7 @@ For full workflow details: `bd prime`
 
 
 
-The Porkbun API (and potentially others) may return fields like `autoRenew`, `notLocal`, or even record `id`s as either a `string` ("123") or a `number` (123) depending on the account state or endpoint.
+The Porkbun API (and potentially others) may return fields like `autoRenew`, `notLocal`, `securityLock`, `whoisPrivacy`, or even record/label `id`s as either a `string` ("123") or a `number` (123) depending on the account state or endpoint.
 
 
 
