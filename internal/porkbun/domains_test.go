@@ -70,3 +70,14 @@ func TestListDomainsResponseUnmarshal(t *testing.T) {
 		t.Fatalf("expected 2 domains, got %d", len(res.Domains))
 	}
 }
+
+func TestCreateRecordResponseIDFormatting(t *testing.T) {
+	payload := `{"status":"SUCCESS","id":586562066}`
+	var res CreateRecordResponse
+	if err := json.Unmarshal([]byte(payload), &res); err != nil {
+		t.Fatalf("failed to unmarshal CreateRecordResponse: %v", err)
+	}
+	if got := string(res.ID); got != "586562066" {
+		t.Fatalf("expected ID %q, got %q", "586562066", got)
+	}
+}

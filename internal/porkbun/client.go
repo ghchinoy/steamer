@@ -38,6 +38,28 @@ type BaseRequest struct {
 	SecretAPIKey string `json:"secretapikey"`
 }
 
+// FlexibleString is a string that can unmarshal from either a JSON string or a JSON number
+// without float64 conversion or scientific notation formatting.
+type FlexibleString string
+
+// UnmarshalJSON implements json.Unmarshaler for FlexibleString.
+func (fs *FlexibleString) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*fs = ""
+		return nil
+	}
+	if data[0] == '"' {
+		var s string
+		if err := json.Unmarshal(data, &s); err != nil {
+			return err
+		}
+		*fs = FlexibleString(s)
+		return nil
+	}
+	*fs = FlexibleString(string(data))
+	return nil
+}
+
 // APIResponse is the common response structure from the Porkbun API.
 type APIResponse struct {
 	Status  string `json:"status"`
@@ -90,7 +112,9 @@ func (c *Client) post(endpoint string, body interface{}, result interface{}) err
 		return fmt.Errorf("api error: %s (status %d)", string(respBody), resp.StatusCode)
 	}
 
-	return json.Unmarshal(respBody, result)
+	dec := json.NewDecoder(bytes.NewReader(respBody))
+	dec.UseNumber()
+	return dec.Decode(result)
 }
 
 // PingResponse is the response from the ping endpoint.

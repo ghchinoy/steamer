@@ -4,23 +4,23 @@ import "fmt"
 
 // Domain represents a domain registered with Porkbun.
 type Domain struct {
-	Domain       string      `json:"domain"`
-	Status       string      `json:"status"`
-	TLD          string      `json:"tld"`
-	CreateDate   string      `json:"createDate"`
-	ExpireDate   string      `json:"expireDate"`
-	SecurityLock interface{} `json:"securityLock"`
-	WhoisPrivacy interface{} `json:"whoisPrivacy"`
-	AutoRenew    interface{} `json:"autoRenew"`
-	NotLocal     interface{} `json:"notLocal"`
-	Labels       []Label     `json:"labels"`
+	Domain       string         `json:"domain"`
+	Status       string         `json:"status"`
+	TLD          string         `json:"tld"`
+	CreateDate   string         `json:"createDate"`
+	ExpireDate   string         `json:"expireDate"`
+	SecurityLock FlexibleString `json:"securityLock"`
+	WhoisPrivacy FlexibleString `json:"whoisPrivacy"`
+	AutoRenew    FlexibleString `json:"autoRenew"`
+	NotLocal     FlexibleString `json:"notLocal"`
+	Labels       []Label        `json:"labels"`
 }
 
 // Label represents a user-defined label in Porkbun.
 type Label struct {
-	ID    interface{} `json:"id"`
-	Title string      `json:"title"`
-	Color string      `json:"color"`
+	ID    FlexibleString `json:"id"`
+	Title string         `json:"title"`
+	Color string         `json:"color"`
 }
 
 // ListDomainsRequest is the request body for listing all domains.

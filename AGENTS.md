@@ -19,33 +19,14 @@ For full workflow details: `bd prime`
 
 ### 🧩 Handling Inconsistent API Types
 
+The Porkbun API (and potentially others) may return fields like `autoRenew`, `notLocal`, `securityLock`, `whoisPrivacy`, or record/label `id`s as either a `string` ("586562066") or a `number` (586562066) depending on the account state or endpoint (e.g., `dns/retrieve` returns string IDs while `dns/create` returns numeric IDs).
 
-
-The Porkbun API (and potentially others) may return fields like `autoRenew`, `notLocal`, `securityLock`, `whoisPrivacy`, or even record/label `id`s as either a `string` ("123") or a `number` (123) depending on the account state or endpoint.
-
-
-
-- **Pattern:** Use `interface{}` in Go structs for these fields to prevent unmarshaling errors.
-
-
-
+- **Pitfall:** Do **not** use `interface{}` with `fmt.Sprintf("%v", val)` for large integer IDs. Standard `json.Unmarshal` decodes JSON numbers into `float64` when the target is `interface{}`, which causes `fmt.Sprintf("%v")` to format IDs $\ge 10^6$ in scientific notation (e.g., `5.86562066e+08`).
+- **Pattern:** Use `porkbun.FlexibleString` in Go structs for fields that may be returned as either strings or numbers, and configure `json.Decoder` with `dec.UseNumber()` in `Client.post`.
 - **Example:**
-
-
-
   ```go
-
-
-
-  ID interface{} `json:"id"`
-
-
-
+  ID FlexibleString `json:"id"`
   ```
-
-
-
-- **Formatting:** Use `%v` in `fmt.Sprintf` or `fmt.Printf` to safely handle `interface{}` values that might contain strings or integers.
 
 
 

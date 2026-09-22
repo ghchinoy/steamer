@@ -18,13 +18,13 @@ import "fmt"
 
 // DNSRecord represents a single DNS record in Porkbun.
 type DNSRecord struct {
-	ID      interface{} `json:"id"`
-	Name    string      `json:"name"`
-	Type    string      `json:"type"`
-	Content string      `json:"content"`
-	TTL     string      `json:"ttl"`
-	Prio    string      `json:"prio"`
-	Notes   string      `json:"notes"`
+	ID      FlexibleString `json:"id"`
+	Name    string         `json:"name"`
+	Type    string         `json:"type"`
+	Content string         `json:"content"`
+	TTL     string         `json:"ttl"`
+	Prio    string         `json:"prio"`
+	Notes   string         `json:"notes"`
 }
 
 // RetrieveDNSResponse is the response from the DNS retrieve endpoint.
@@ -46,7 +46,7 @@ type CreateRecordRequest struct {
 // CreateRecordResponse is the response from the DNS create endpoint.
 type CreateRecordResponse struct {
 	APIResponse
-	ID interface{} `json:"id"`
+	ID FlexibleString `json:"id"`
 }
 
 // RetrieveRecords fetches all DNS records for the given domain.
@@ -82,7 +82,7 @@ func (c *Client) CreateRecord(domain string, record CreateRecordRequest) (string
 		}
 		return "", fmt.Errorf("api error: %s", msg)
 	}
-	return fmt.Sprintf("%v", res.ID), nil
+	return string(res.ID), nil
 }
 
 // DeleteRecord deletes the specified DNS record from the given domain.
