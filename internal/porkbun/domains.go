@@ -9,8 +9,8 @@ type Domain struct {
 	TLD          string      `json:"tld"`
 	CreateDate   string      `json:"createDate"`
 	ExpireDate   string      `json:"expireDate"`
-	SecurityLock string      `json:"securityLock"`
-	WhoisPrivacy string      `json:"whoisPrivacy"`
+	SecurityLock interface{} `json:"securityLock"`
+	WhoisPrivacy interface{} `json:"whoisPrivacy"`
 	AutoRenew    interface{} `json:"autoRenew"`
 	NotLocal     interface{} `json:"notLocal"`
 	Labels       []Label     `json:"labels"`
@@ -18,9 +18,9 @@ type Domain struct {
 
 // Label represents a user-defined label in Porkbun.
 type Label struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-	Color string `json:"color"`
+	ID    interface{} `json:"id"`
+	Title string      `json:"title"`
+	Color string      `json:"color"`
 }
 
 // ListDomainsRequest is the request body for listing all domains.
