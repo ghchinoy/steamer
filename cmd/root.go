@@ -34,6 +34,8 @@ const (
 	GroupManagement = "management"
 	// GroupTUI is for interactive terminal interface commands.
 	GroupTUI = "tui"
+	// GroupEmail is for email forwarding commands.
+	GroupEmail = "email"
 )
 
 var rootCmd = &cobra.Command{
@@ -65,6 +67,10 @@ func init() {
 	rootCmd.AddGroup(&cobra.Group{
 		ID:    GroupTUI,
 		Title: "Interactive Commands:",
+	})
+	rootCmd.AddGroup(&cobra.Group{
+		ID:    GroupEmail,
+		Title: "Email Forwarding Commands:",
 	})
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/steamer/config.yaml)")

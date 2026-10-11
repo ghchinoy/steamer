@@ -32,6 +32,7 @@ go.work.sum
 # Project Specific
 .genkit/
 .beads/.jsonl.lock
+.beads.gate.lock
 *.bck.*
 
 # Beads / Dolt files (added by bd init)

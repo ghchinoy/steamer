@@ -165,3 +165,58 @@ Verify API credentials and retrieve your IP address.
   "publickey": "-----BEGIN PUBLIC KEY-----\n..."
 }
 ```
+
+## Email Forwarding Functionality
+
+### Get Email Forwards
+- **Endpoint:** `https://api.porkbun.com/api/json/v3/email/getForwards/DOMAIN`
+- **Request:**
+```json
+{
+  "secretapikey": "YOUR_SECRET_API_KEY",
+  "apikey": "YOUR_API_KEY"
+}
+```
+- **Response:**
+```json
+{
+  "status": "SUCCESS",
+  "domain": "example.com",
+  "forwards": [
+    {
+      "address": "hello@example.com",
+      "forwardTo": "destination@example.com",
+      "created": "2026-01-01 12:00:00"
+    }
+  ],
+  "limits": {
+    "used": 1,
+    "max": 20
+  },
+  "dnsConfigured": true
+}
+```
+
+### Add Email Forward
+- **Endpoint:** `https://api.porkbun.com/api/json/v3/email/addForward/DOMAIN`
+- **Request:**
+```json
+{
+  "secretapikey": "YOUR_SECRET_API_KEY",
+  "apikey": "YOUR_API_KEY",
+  "address": "hello",
+  "forwardTo": "destination@example.com"
+}
+```
+
+### Delete Email Forward
+- **Endpoint:** `https://api.porkbun.com/api/json/v3/email/deleteForward/DOMAIN`
+- **Request:**
+```json
+{
+  "secretapikey": "YOUR_SECRET_API_KEY",
+  "apikey": "YOUR_API_KEY",
+  "address": "hello",
+  "forwardTo": "destination@example.com"
+}
+```

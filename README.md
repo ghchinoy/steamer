@@ -94,6 +94,15 @@ steamer add-cname aaie.cloud blog ghs.google.com
 
 # Add a TXT record
 steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
+
+# List email forwards for a domain
+steamer email list chinoy.si
+
+# Add an email forwarding rule
+steamer email add chinoy.si hello ghchinoy@gmail.com
+
+# Remove an email forwarding rule
+steamer email rm chinoy.si hello ghchinoy@gmail.com
 ```
 
 ## 📚 Documentation
