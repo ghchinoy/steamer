@@ -63,6 +63,26 @@ Verify API credentials and retrieve your IP address.
 ```
 - **Rate Limits:** Domain checks are rate-limited. Example: 1 check per 10 seconds.
 
+### Domain Pricing (All TLDs)
+- **Endpoint:** `https://api.porkbun.com/api/json/v3/pricing/get`
+- **Request:**
+```json
+{}
+```
+- **Response:**
+```json
+{
+  "status": "SUCCESS",
+  "pricing": {
+    "com": {
+      "registration": "10.37",
+      "renewal": "10.37",
+      "transfer": "10.37"
+    }
+  }
+}
+```
+
 ### Glue Records
 - **Endpoints:**
     - Create: `https://api.porkbun.com/api/json/v3/domain/createGlue/DOMAIN/HOST`
@@ -105,6 +125,14 @@ Verify API credentials and retrieve your IP address.
   "notes": "" // Optional notes.
 }
 ```
+- **Response:**
+```json
+{
+  "status": "SUCCESS",
+  "id": 106926659
+}
+```
+- **Subdomain Delegation (`NS`):** Set `type` to `"NS"`, `name` to the subdomain (e.g., `"int"`), and `content` to the target nameserver (e.g., `"ns-cloud-b1.googledomains.com"`). Creating an `NS` record for a subdomain will fail if a conflicting `CNAME` record already exists for that subdomain.
 
 ### Edit Record by Domain and ID
 - **Endpoint:** `https://api.porkbun.com/api/json/v3/dns/edit/DOMAIN/ID`

@@ -101,12 +101,13 @@ When using `fmt.Sprintf` for TUI tables (e.g., in Bubble Tea), ensure format str
 
 - **Record Limits:** A domain can have a maximum of 200 DNS records across all types.
 - **Root Record Conflicts:** The API will fail with a generic "We were unable to create the DNS record" if you try to add an `A` or `AAAA` record to the root (subdomain `""`) when a root `ALIAS` or `CNAME` record already exists. Ensure conflicting root alias records are deleted before adding IP-based root records.
+- **Subdomain NS Delegation Conflicts:** Creating an `NS` record for a subdomain (via `dns/create` / `steamer add-ns`) will fail if a conflicting `CNAME` record already exists for that subdomain. Multiple `NS` records can be added to the same subdomain to delegate authority across redundant nameservers.
 
 ### 🤖 CLI Design Best Practices (A2A Standard)
 
 To ensure the CLI remains human-friendly and highly accessible to AI agents, `steamer` follows these best practices (adapted from the A2A CLI standard):
 
-- **Structured Discoverability:** Use `GroupID` in Cobra commands to categorize them in the `--help` output (e.g., `GroupInfo`, `GroupManagement`, `GroupTUI`).
+- **Structured Discoverability:** Use `GroupID` in Cobra commands to categorize them in the `--help` output (e.g., `GroupInfo`, `GroupManagement`, `GroupTUI`, `GroupEmail`).
 - **Three Pillars of Documentation:** Every command MUST have a `Short` description (action verb), a `Long` detailed explanation, and copy-pasteable `Example` blocks.
 - **Agent-First Interoperability:** Data-returning commands (like `list-domains`) MUST support a `--json` flag for deterministic, non-interactive parsing.
 - **Proactive Error Guidance:** Don't just fail on missing config; print a clear "Hint:" explaining exactly how to fix it (e.g., setting environment variables or creating a config file).
