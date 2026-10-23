@@ -92,6 +92,9 @@ steamer add-aaaa aaie.cloud home 2001:db8::1
 # Add a CNAME in a flash
 steamer add-cname aaie.cloud blog ghs.google.com
 
+# Add an NS record for subdomain delegation
+steamer add-ns aaie.cloud int ns-cloud-b1.googledomains.com
+
 # Add a TXT record
 steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
 
