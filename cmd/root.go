@@ -28,6 +28,7 @@ import (
 
 	"github.com/ghchinoy/steamer/internal/porkbun"
 	"github.com/ghchinoy/steamer/internal/theme"
+	"github.com/ghchinoy/steamer/internal/version"
 )
 
 const (
@@ -63,6 +64,7 @@ func NewRootCmd() *cobra.Command {
 		Use:           "steamer",
 		Short:         "A CLI for managing Porkbun domains",
 		Long:          `steamer is a CLI tool built with Go, Cobra, and Bubble Tea to manage your Porkbun domains, DNS records, and email forwarding.`,
+		Version:       version.Current().Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
@@ -95,6 +97,7 @@ func NewRootCmd() *cobra.Command {
 		newRmCmd(app),
 		newSearchCmd(app),
 		newTUICmd(app),
+		newVersionCmd(),
 	)
 
 	return rootCmd

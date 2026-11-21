@@ -16,15 +16,21 @@ Whether you're delegating a subdomain with `NS` records, adding a `CNAME` for a 
 
 ## 🛠️ Installation
 
-The most idiomatic way to install **steamer** is via `go install`:
+### Homebrew (macOS & Linux)
+
+```bash
+brew install ghchinoy/tap/steamer
+```
+
+### Go Install
 
 ```bash
 go install github.com/ghchinoy/steamer@latest
 ```
 
-This will build the binary and place it in your `$GOPATH/bin` (typically `~/go/bin`). Ensure that directory is in your system's `PATH`.
+This builds the binary and places it in your `$GOPATH/bin` (typically `~/go/bin`). Ensure that directory is in your system's `PATH`.
 
-Alternatively, if you've cloned the repository, you can install it locally:
+### From Source
 
 ```bash
 go install .
@@ -146,6 +152,7 @@ steamer email rm example.com hello user@example.org --yes
 | `steamer email list <domain>` | List configured email forwards and quota usage | `--json` |
 | `steamer email add <domain> <addr> <to>` | Create an email forwarding rule | `--json` |
 | `steamer email rm <domain> <addr> <to>` | Remove an email forwarding rule | `-y, --yes`, `--json` |
+| `steamer version` | Display steamer version and build metadata | `--json` |
 
 ## 📚 Documentation
 Check out `docs/api_reference.md` for a quick look at the Porkbun V3 API endpoints supported by this tool.

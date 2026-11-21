@@ -1,0 +1,77 @@
+version: 2
+
+project_name: steamer
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: steamer
+    main: .
+    binary: steamer
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X github.com/ghchinoy/steamer/internal/version.Version={{.Version}}
+      - -X github.com/ghchinoy/steamer/internal/version.Commit={{.ShortCommit}}
+      - -X github.com/ghchinoy/steamer/internal/version.Date={{.Date}}
+
+archives:
+  - id: default
+    formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - LICENSE
+      - README.md
+      - CHANGELOG.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true
+
+homebrew_casks:
+  - name: steamer
+    repository:
+      owner: ghchinoy
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Casks
+    homepage: https://github.com/ghchinoy/steamer
+    description: Fast, interactive CLI and TUI for managing Porkbun domains, DNS records, and email forwarding
+    binaries:
+      - steamer
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/steamer"]
+          end
+
+release:
+  github:
+    owner: ghchinoy
+    name: steamer

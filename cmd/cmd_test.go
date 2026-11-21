@@ -43,6 +43,7 @@ func TestNewRootCmd_SubcommandsRegistered(t *testing.T) {
 		{"rm"},
 		{"search"},
 		{"tui"},
+		{"version"},
 		{"email", "list"},
 		{"email", "add"},
 		{"email", "rm"},
@@ -57,6 +58,38 @@ func TestNewRootCmd_SubcommandsRegistered(t *testing.T) {
 		if cmd == nil || cmd == root {
 			t.Errorf("root.Find(%v) = %v, want registered subcommand", path, cmd)
 		}
+	}
+}
+
+func TestVersionCmd(t *testing.T) {
+	root := NewRootCmd()
+	var out bytes.Buffer
+	root.SetOut(&out)
+	root.SetErr(&bytes.Buffer{})
+	root.SetArgs([]string{"version", "--json"})
+
+	if err := root.ExecuteContext(t.Context()); err != nil {
+		t.Fatalf("version --json unexpected error: %v", err)
+	}
+
+	var info map[string]string
+	if err := json.Unmarshal(out.Bytes(), &info); err != nil {
+		t.Fatalf("json.Unmarshal(version output %q) unexpected error: %v", out.String(), err)
+	}
+	if info["version"] == "" {
+		t.Errorf("version --json output = %+v, want non-empty version field", info)
+	}
+
+	flagRoot := NewRootCmd()
+	var flagOut bytes.Buffer
+	flagRoot.SetOut(&flagOut)
+	flagRoot.SetErr(&bytes.Buffer{})
+	flagRoot.SetArgs([]string{"--version"})
+	if err := flagRoot.ExecuteContext(t.Context()); err != nil {
+		t.Fatalf("--version unexpected error: %v", err)
+	}
+	if !strings.Contains(flagOut.String(), "steamer version") {
+		t.Errorf("--version output = %q, want prefix %q", flagOut.String(), "steamer version")
 	}
 }
 

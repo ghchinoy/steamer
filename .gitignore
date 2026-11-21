@@ -1,5 +1,6 @@
-# Binaries
+# Binaries & Releases
 steamer
+dist/
 *.exe
 *.exe~
 *.dll
