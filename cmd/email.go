@@ -15,174 +15,225 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
 	"strings"
 
-	"github.com/ghchinoy/steamer/internal/porkbun"
-	"github.com/ghchinoy/steamer/internal/theme"
 	"github.com/spf13/cobra"
+
+	"github.com/ghchinoy/steamer/internal/theme"
 )
 
-var emailListJSON bool
-
-var emailCmd = &cobra.Command{
-	Use:     "email",
-	Short:   "Manage email forwarding rules for domains",
-	GroupID: GroupEmail,
-	Long:    `View, create, and delete email forwarding rules for domains in your Porkbun account.`,
-	Example: `  # List all email forwards for a domain
-  steamer email list chinoy.si
+func newEmailCmd(app *cliApp) *cobra.Command {
+	emailCmd := &cobra.Command{
+		Use:     "email",
+		Short:   "Manage email forwarding rules for domains",
+		GroupID: GroupEmail,
+		Long:    `View, create, and delete email forwarding rules for domains in your Porkbun account.`,
+		Example: `  # List all email forwards for a domain
+  steamer email list example.com
 
   # Add an email forwarding rule
-  steamer email add chinoy.si hello ghchinoy@gmail.com
+  steamer email add example.com hello user@example.org
 
   # Remove an email forwarding rule
-  steamer email rm chinoy.si hello ghchinoy@gmail.com`,
+  steamer email rm example.com hello user@example.org`,
+	}
+
+	emailCmd.AddCommand(
+		newEmailListCmd(app),
+		newEmailAddCmd(app),
+		newEmailRmCmd(app),
+	)
+	return emailCmd
 }
 
-var emailListCmd = &cobra.Command{
-	Use:   "list [domain]",
-	Short: "List email forwards for a specific domain",
-	Long:  `Retrieves and displays all configured email forwarding rules, forward quotas, and DNS status for the domain.`,
-	Example: `  # List email forwards for chinoy.si
-  steamer email list chinoy.si
+func newEmailListCmd(app *cliApp) *cobra.Command {
+	var outputJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "list <domain>",
+		Short: "List email forwards for a specific domain",
+		Long:  `Retrieves and displays all configured email forwarding rules, forward quotas, and DNS status for the domain.`,
+		Example: `  # List email forwards for example.com
+  steamer email list example.com
 
   # Output email forwards as JSON
-  steamer email list chinoy.si --json`,
-	Args: cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		domain := args[0]
-		client := porkbun.NewClient(apiKey, secretKey)
-		res, err := client.GetEmailForwards(domain)
-		if err != nil {
-			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error retrieving email forwards for %s: %v", domain, err)))
-			os.Exit(1)
-		}
-
-		if emailListJSON {
-			b, err := json.MarshalIndent(res, "", "  ")
+  steamer email list example.com --json`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := app.newClient()
 			if err != nil {
-				fmt.Printf("Error encoding JSON: %v\n", err)
-				os.Exit(1)
+				return err
 			}
-			fmt.Println(string(b))
-			return
-		}
 
-		if len(res.Forwards) == 0 {
-			fmt.Printf("No email forwards found for %s.\n", domain)
-			return
-		}
+			domain := args[0]
+			ctx, cancel := context.WithTimeout(cmd.Context(), defaultRequestTimeout)
+			defer cancel()
 
-		fmt.Printf("%s %s %s\n",
-			theme.Accent.Render(fmt.Sprintf("%-32s", "ADDRESS")),
-			theme.Accent.Render(fmt.Sprintf("%-32s", "FORWARD TO")),
-			theme.Accent.Render(fmt.Sprintf("%-20s", "CREATED")),
-		)
+			res, err := client.FetchEmailForwards(ctx, domain)
+			if err != nil {
+				return fmt.Errorf("retrieving email forwards for %q: %w", domain, err)
+			}
 
-		for _, f := range res.Forwards {
-			fmt.Printf("%-32s %-32s %s\n",
-				theme.ID.Render(f.Address),
-				f.ForwardTo,
-				theme.Muted.Render(f.Created),
+			if outputJSON {
+				return printJSON(cmd.OutOrStdout(), res)
+			}
+
+			out := cmd.OutOrStdout()
+			if len(res.Forwards) == 0 {
+				_, err = fmt.Fprintf(out, "No email forwards found for %s.\n", domain)
+				return err
+			}
+
+			_, _ = fmt.Fprintf(out, "%s %s %s\n",
+				theme.Accent.Render(fmt.Sprintf("%-32s", "ADDRESS")),
+				theme.Accent.Render(fmt.Sprintf("%-32s", "FORWARD TO")),
+				theme.Accent.Render(fmt.Sprintf("%-20s", "CREATED")),
 			)
-		}
 
-		dnsStatus := theme.Pass.Render("Configured")
-		if !res.DNSConfigured {
-			dnsStatus = theme.Warn.Render("Not Configured")
-		}
+			for _, f := range res.Forwards {
+				_, _ = fmt.Fprintf(out, "%s %-32s %s\n",
+					theme.ID.Render(fmt.Sprintf("%-32s", f.Address)),
+					f.ForwardTo,
+					theme.Muted.Render(f.Created),
+				)
+			}
 
-		fmt.Println()
-		fmt.Printf("%s %d/%d used  |  %s %s\n",
-			theme.Muted.Render("Quota:"),
-			res.Limits.Used,
-			res.Limits.Max,
-			theme.Muted.Render("MX/SPF DNS:"),
-			dnsStatus,
-		)
-	},
+			dnsStatus := theme.Pass.Render("Configured")
+			if !res.DNSConfigured {
+				dnsStatus = theme.Warn.Render("Not Configured")
+			}
+
+			_, _ = fmt.Fprintln(out)
+			_, err = fmt.Fprintf(out, "%s %d/%d used  |  %s %s\n",
+				theme.Muted.Render("Quota:"),
+				res.Limits.Used,
+				res.Limits.Max,
+				theme.Muted.Render("MX/SPF DNS:"),
+				dnsStatus,
+			)
+			return err
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false, "Output forwards in JSON format")
+	return cmd
 }
 
-var emailAddCmd = &cobra.Command{
-	Use:   "add [domain] [address] [forward-to]",
-	Short: "Add an email forwarding rule to a domain",
-	Long:  `Creates a new email forwarding rule in Porkbun for the specified domain, routing emails from [address] to [forward-to].`,
-	Example: `  # Forward hello@chinoy.si to your personal email
-  steamer email add chinoy.si hello ghchinoy@gmail.com
+func newEmailAddCmd(app *cliApp) *cobra.Command {
+	var outputJSON bool
+
+	cmd := &cobra.Command{
+		Use:   "add <domain> <address> <forward-to>",
+		Short: "Add an email forwarding rule to a domain",
+		Long:  `Creates a new email forwarding rule in Porkbun for the specified domain, routing emails from <address> to <forward-to>.`,
+		Example: `  # Forward hello@example.com to your destination email
+  steamer email add example.com hello user@example.org
 
   # Forward using full address format
-  steamer email add chinoy.si hello@chinoy.si ghchinoy@gmail.com`,
-	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+  steamer email add example.com hello@example.com user@example.org`,
+		Args: cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := app.newClient()
+			if err != nil {
+				return err
+			}
 
-		domain := args[0]
-		address := args[1]
-		forwardTo := args[2]
+			domain := args[0]
+			address := args[1]
+			forwardTo := args[2]
+			cleanAddr := strings.TrimSuffix(address, "@"+domain)
 
-		cleanAddr := strings.TrimSuffix(address, "@"+domain)
+			ctx, cancel := context.WithTimeout(cmd.Context(), defaultRequestTimeout)
+			defer cancel()
 
-		client := porkbun.NewClient(apiKey, secretKey)
-		err = client.AddEmailForward(domain, cleanAddr, forwardTo)
-		if err != nil {
-			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating email forward: %v", err)))
-			os.Exit(1)
-		}
+			if err := client.AddEmailForward(ctx, domain, address, forwardTo); err != nil {
+				return fmt.Errorf("creating email forward: %w", err)
+			}
 
-		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created email forward: %s@%s -> %s", cleanAddr, domain, forwardTo)))
-	},
+			if outputJSON {
+				return printJSON(cmd.OutOrStdout(), map[string]string{
+					"domain":    domain,
+					"address":   fmt.Sprintf("%s@%s", cleanAddr, domain),
+					"forwardTo": forwardTo,
+					"status":    "created",
+				})
+			}
+
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), theme.Pass.Render(fmt.Sprintf(
+				"Successfully created email forward: %s@%s -> %s",
+				cleanAddr, domain, forwardTo,
+			)))
+			return err
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false, "Output result in JSON format")
+	return cmd
 }
 
-var emailRmCmd = &cobra.Command{
-	Use:   "rm [domain] [address] [forward-to]",
-	Short: "Remove an email forwarding rule from a domain",
-	Long:  `Deletes an existing email forwarding rule in Porkbun for the specified domain, address, and destination.`,
-	Example: `  # Remove forwarding from hello@chinoy.si to ghchinoy@gmail.com
-  steamer email rm chinoy.si hello ghchinoy@gmail.com`,
-	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+func newEmailRmCmd(app *cliApp) *cobra.Command {
+	var (
+		outputJSON bool
+		yes        bool
+	)
 
-		domain := args[0]
-		address := args[1]
-		forwardTo := args[2]
+	cmd := &cobra.Command{
+		Use:   "rm <domain> <address> <forward-to>",
+		Short: "Remove an email forwarding rule from a domain",
+		Long:  `Deletes an existing email forwarding rule in Porkbun for the specified domain, address, and destination. Prompts for confirmation unless --yes is provided.`,
+		Example: `  # Remove forwarding from hello@example.com to user@example.org
+  steamer email rm example.com hello user@example.org
 
-		cleanAddr := strings.TrimSuffix(address, "@"+domain)
+  # Remove without interactive confirmation
+  steamer email rm example.com hello user@example.org --yes`,
+		Args: cobra.ExactArgs(3),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := app.newClient()
+			if err != nil {
+				return err
+			}
 
-		client := porkbun.NewClient(apiKey, secretKey)
-		err = client.DeleteEmailForward(domain, cleanAddr, forwardTo)
-		if err != nil {
-			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error deleting email forward: %v", err)))
-			os.Exit(1)
-		}
+			domain := args[0]
+			address := args[1]
+			forwardTo := args[2]
+			cleanAddr := strings.TrimSuffix(address, "@"+domain)
 
-		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully deleted email forward: %s@%s -> %s", cleanAddr, domain, forwardTo)))
-	},
-}
+			prompt := fmt.Sprintf("Delete email forward %s@%s -> %s?", cleanAddr, domain, forwardTo)
+			confirmed, err := confirmAction(cmd, prompt, yes)
+			if err != nil {
+				return err
+			}
+			if !confirmed {
+				return nil
+			}
 
-func init() {
-	emailListCmd.Flags().BoolVar(&emailListJSON, "json", false, "Output forwards in JSON format")
+			ctx, cancel := context.WithTimeout(cmd.Context(), defaultRequestTimeout)
+			defer cancel()
 
-	emailCmd.AddCommand(emailListCmd)
-	emailCmd.AddCommand(emailAddCmd)
-	emailCmd.AddCommand(emailRmCmd)
+			if err := client.DeleteEmailForward(ctx, domain, address, forwardTo); err != nil {
+				return fmt.Errorf("deleting email forward: %w", err)
+			}
 
-	rootCmd.AddCommand(emailCmd)
+			if outputJSON {
+				return printJSON(cmd.OutOrStdout(), map[string]string{
+					"domain":    domain,
+					"address":   fmt.Sprintf("%s@%s", cleanAddr, domain),
+					"forwardTo": forwardTo,
+					"status":    "deleted",
+				})
+			}
+
+			_, err = fmt.Fprintln(cmd.OutOrStdout(), theme.Pass.Render(fmt.Sprintf(
+				"Successfully deleted email forward: %s@%s -> %s",
+				cleanAddr, domain, forwardTo,
+			)))
+			return err
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false, "Output result in JSON format")
+	cmd.Flags().BoolVarP(&yes, "yes", "y", false, "Skip interactive confirmation prompt")
+	return cmd
 }

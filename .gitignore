@@ -8,7 +8,6 @@ steamer
 
 # Logs
 *.log
-drivectl-mcp.log
 
 # Env / Secrets
 .env
@@ -25,17 +24,17 @@ vendor/
 go.work
 go.work.sum
 
-# IDEs
+# IDEs & Agent State
 .idea/
 .vscode/
+.serena/
 
-# Project Specific
-.genkit/
+# Beads / Dolt files
 .beads/.jsonl.lock
 .beads.gate.lock
-*.bck.*
-
-# Beads / Dolt files (added by bd init)
+.beads/proxieddb/
 .dolt/
+*.bck.*
 *.db
+*.gate.lock*
 .beads-credential-key

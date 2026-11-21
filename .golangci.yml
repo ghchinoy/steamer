@@ -1,7 +1,13 @@
 version: "2"
 linters:
   enable:
+    - bodyclose
+    - errorlint
+    - gosec
     - misspell
+    - modernize
+    - nilerr
+    - noctx
     - prealloc
     - revive
     - unconvert
@@ -42,6 +48,10 @@ formatters:
   enable:
     - gofmt
     - goimports
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/ghchinoy/steamer
   exclusions:
     generated: lax
     paths:

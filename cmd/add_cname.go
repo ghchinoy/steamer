@@ -14,50 +14,15 @@
 
 package cmd
 
-import (
-	"fmt"
-	"os"
+import "github.com/spf13/cobra"
 
-	"github.com/ghchinoy/steamer/internal/porkbun"
-	"github.com/ghchinoy/steamer/internal/theme"
-
-	"github.com/spf13/cobra"
-)
-
-var addCnameCmd = &cobra.Command{
-	Use:     "add-cname [domain] [subdomain] [target]",
-	Short:   "Add a new CNAME record to a domain",
-	GroupID: GroupManagement,
-	Long:    `Creates a new CNAME record for the specified domain and subdomain, pointing it to a target hostname.`,
-	Example: `  # Alias blog.aaie.cloud to ghs.google.com
-  steamer add-cname aaie.cloud blog ghs.google.com`,
-	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		domain := args[0]
-		subdomain := args[1]
-		target := args[2]
-
-		client := porkbun.NewClient(apiKey, secretKey)
-		id, err := client.CreateRecord(domain, porkbun.CreateRecordRequest{
-			Name:    subdomain,
-			Type:    "CNAME",
-			Content: target,
-		})
-		if err != nil {
-			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating CNAME record: %v", err)))
-			os.Exit(1)
-		}
-
-		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created CNAME record for %s.%s pointing to %s (ID: %s)", subdomain, domain, target, id)))
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(addCnameCmd)
+func newAddCNAMECmd(app *cliApp) *cobra.Command {
+	return newAddRecordCmd(app, recordCmdSpec{
+		use:        "add-cname <domain> <subdomain> <target>",
+		short:      "Add a new CNAME record to a domain",
+		long:       `Creates a new CNAME record for the specified domain and subdomain, pointing it to a target hostname.`,
+		recordType: "CNAME",
+		example: `  # Alias blog.example.com to ghs.google.com
+  steamer add-cname example.com blog ghs.google.com`,
+	})
 }

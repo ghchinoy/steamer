@@ -14,7 +14,11 @@
 
 package porkbun
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"net/url"
+)
 
 // DNSRecord represents a single DNS record in Porkbun.
 type DNSRecord struct {
@@ -50,55 +54,51 @@ type CreateRecordResponse struct {
 }
 
 // RetrieveRecords fetches all DNS records for the given domain.
-func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
-	req := BaseRequest{
-		APIKey:       c.APIKey,
-		SecretAPIKey: c.SecretAPIKey,
+func (c *Client) RetrieveRecords(ctx context.Context, domain string) ([]DNSRecord, error) {
+	if err := validatePathSegment("domain", domain); err != nil {
+		return nil, err
 	}
 	var res RetrieveDNSResponse
-	endpoint := fmt.Sprintf("dns/retrieve/%s", domain)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
+	endpoint := fmt.Sprintf("dns/retrieve/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, c.baseRequest(), &res); err != nil {
+		return nil, err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
 		return nil, err
 	}
 	return res.Records, nil
 }
 
 // CreateRecord creates a new DNS record for the given domain.
-func (c *Client) CreateRecord(domain string, record CreateRecordRequest) (string, error) {
-	record.APIKey = c.APIKey
-	record.SecretAPIKey = c.SecretAPIKey
-
-	var res CreateRecordResponse
-	endpoint := fmt.Sprintf("dns/create/%s", domain)
-	err := c.post(endpoint, record, &res)
-	if err != nil {
+func (c *Client) CreateRecord(ctx context.Context, domain string, record CreateRecordRequest) (string, error) {
+	if err := validatePathSegment("domain", domain); err != nil {
 		return "", err
 	}
-	if res.Status != "SUCCESS" {
-		msg := res.Message
-		if msg == "" {
-			msg = "unknown error"
-		}
-		return "", fmt.Errorf("api error: %s", msg)
+	record.BaseRequest = c.baseRequest()
+
+	var res CreateRecordResponse
+	endpoint := fmt.Sprintf("dns/create/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, record, &res); err != nil {
+		return "", err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
+		return "", err
 	}
 	return string(res.ID), nil
 }
 
 // DeleteRecord deletes the specified DNS record from the given domain.
-func (c *Client) DeleteRecord(domain, id string) error {
-	req := BaseRequest{
-		APIKey:       c.APIKey,
-		SecretAPIKey: c.SecretAPIKey,
-	}
-	var res APIResponse
-	endpoint := fmt.Sprintf("dns/delete/%s/%s", domain, id)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
+func (c *Client) DeleteRecord(ctx context.Context, domain, recordID string) error {
+	if err := validatePathSegment("domain", domain); err != nil {
 		return err
 	}
-	if res.Status != "SUCCESS" {
-		return fmt.Errorf("delete record failed: %s", res.Message)
+	if err := validatePathSegment("record ID", recordID); err != nil {
+		return err
 	}
-	return nil
+	var res APIResponse
+	endpoint := fmt.Sprintf("dns/delete/%s/%s", url.PathEscape(domain), url.PathEscape(recordID))
+	if err := c.post(ctx, endpoint, c.baseRequest(), &res); err != nil {
+		return err
+	}
+	return checkAPIStatus("delete record failed", res)
 }

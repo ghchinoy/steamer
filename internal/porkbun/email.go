@@ -15,7 +15,9 @@
 package porkbun
 
 import (
+	"context"
 	"fmt"
+	"net/url"
 	"strings"
 )
 
@@ -33,8 +35,8 @@ type ForwardLimits struct {
 	Max  int `json:"max"`
 }
 
-// GetForwardsResponse is the response from the email/getForwards endpoint.
-type GetForwardsResponse struct {
+// EmailForwardsResponse is the response from the email/getForwards endpoint.
+type EmailForwardsResponse struct {
 	APIResponse
 	Domain        string         `json:"domain"`
 	Forwards      []EmailForward `json:"forwards"`
@@ -56,82 +58,56 @@ type DeleteForwardRequest struct {
 	ForwardTo string `json:"forwardTo"`
 }
 
-// GetEmailForwards retrieves all email forwarding rules for a domain.
-func (c *Client) GetEmailForwards(domain string) (*GetForwardsResponse, error) {
-	req := BaseRequest{
-		APIKey:       c.APIKey,
-		SecretAPIKey: c.SecretAPIKey,
-	}
-	var res GetForwardsResponse
-	endpoint := fmt.Sprintf("email/getForwards/%s", domain)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
+// FetchEmailForwards retrieves all email forwarding rules for a domain.
+func (c *Client) FetchEmailForwards(ctx context.Context, domain string) (*EmailForwardsResponse, error) {
+	if err := validatePathSegment("domain", domain); err != nil {
 		return nil, err
 	}
-	if res.Status != "SUCCESS" {
-		msg := res.Message
-		if msg == "" {
-			msg = "unknown error"
-		}
-		return nil, fmt.Errorf("api error: %s", msg)
+	var res EmailForwardsResponse
+	endpoint := fmt.Sprintf("email/getForwards/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, c.baseRequest(), &res); err != nil {
+		return nil, err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
+		return nil, err
 	}
 	return &res, nil
 }
 
 // AddEmailForward creates a new email forwarding rule for the domain.
-func (c *Client) AddEmailForward(domain, address, forwardTo string) error {
-	// Normalize address by trimming domain suffix if user supplied it
-	cleanAddress := strings.TrimSuffix(address, "@"+domain)
-
-	req := AddForwardRequest{
-		BaseRequest: BaseRequest{
-			APIKey:       c.APIKey,
-			SecretAPIKey: c.SecretAPIKey,
-		},
-		Address:   cleanAddress,
-		ForwardTo: forwardTo,
-	}
-	var res APIResponse
-	endpoint := fmt.Sprintf("email/addForward/%s", domain)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
+func (c *Client) AddEmailForward(ctx context.Context, domain, address, forwardTo string) error {
+	if err := validatePathSegment("domain", domain); err != nil {
 		return err
 	}
-	if res.Status != "SUCCESS" {
-		msg := res.Message
-		if msg == "" {
-			msg = "unknown error"
-		}
-		return fmt.Errorf("api error: %s", msg)
+	cleanAddress := strings.TrimSuffix(address, "@"+domain)
+	req := AddForwardRequest{
+		BaseRequest: c.baseRequest(),
+		Address:     cleanAddress,
+		ForwardTo:   forwardTo,
 	}
-	return nil
+	var res APIResponse
+	endpoint := fmt.Sprintf("email/addForward/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, req, &res); err != nil {
+		return err
+	}
+	return checkAPIStatus("api error", res)
 }
 
 // DeleteEmailForward removes an existing email forwarding rule from the domain.
-func (c *Client) DeleteEmailForward(domain, address, forwardTo string) error {
-	// Normalize address by trimming domain suffix if user supplied it
-	cleanAddress := strings.TrimSuffix(address, "@"+domain)
-
-	req := DeleteForwardRequest{
-		BaseRequest: BaseRequest{
-			APIKey:       c.APIKey,
-			SecretAPIKey: c.SecretAPIKey,
-		},
-		Address:   cleanAddress,
-		ForwardTo: forwardTo,
-	}
-	var res APIResponse
-	endpoint := fmt.Sprintf("email/deleteForward/%s", domain)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
+func (c *Client) DeleteEmailForward(ctx context.Context, domain, address, forwardTo string) error {
+	if err := validatePathSegment("domain", domain); err != nil {
 		return err
 	}
-	if res.Status != "SUCCESS" {
-		msg := res.Message
-		if msg == "" {
-			msg = "unknown error"
-		}
-		return fmt.Errorf("api error: %s", msg)
+	cleanAddress := strings.TrimSuffix(address, "@"+domain)
+	req := DeleteForwardRequest{
+		BaseRequest: c.baseRequest(),
+		Address:     cleanAddress,
+		ForwardTo:   forwardTo,
 	}
-	return nil
+	var res APIResponse
+	endpoint := fmt.Sprintf("email/deleteForward/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, req, &res); err != nil {
+		return err
+	}
+	return checkAPIStatus("api error", res)
 }

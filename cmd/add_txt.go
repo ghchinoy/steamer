@@ -14,53 +14,19 @@
 
 package cmd
 
-import (
-	"fmt"
-	"os"
+import "github.com/spf13/cobra"
 
-	"github.com/ghchinoy/steamer/internal/porkbun"
-	"github.com/ghchinoy/steamer/internal/theme"
+func newAddTXTCmd(app *cliApp) *cobra.Command {
+	return newAddRecordCmd(app, recordCmdSpec{
+		use:         "add-txt <domain> <subdomain> <text>",
+		short:       "Add a new TXT record to a domain",
+		long:        `Creates a new TXT record for the specified domain and subdomain. TXT records are commonly used for domain verification, SPF, and DMARC.`,
+		recordType:  "TXT",
+		successVerb: "with value",
+		example: `  # Add a DMARC record
+  steamer add-txt example.com _dmarc "v=DMARC1; p=none;"
 
-	"github.com/spf13/cobra"
-)
-
-var addTxtCmd = &cobra.Command{
-	Use:     "add-txt [domain] [subdomain] [text]",
-	Short:   "Add a new TXT record to a domain",
-	GroupID: GroupManagement,
-	Long:    `Creates a new TXT record for the specified domain and subdomain. TXT records are commonly used for domain verification, SPF, and DMARC.`,
-	Example: `  # Add a DMARC record
-  steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
-
-  # Add a Google site verification record to the root domain
-  steamer add-txt aaie.cloud "" "google-site-verification=abc123xyz"`,
-	Args: cobra.ExactArgs(3),
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		domain := args[0]
-		subdomain := args[1]
-		text := args[2]
-
-		client := porkbun.NewClient(apiKey, secretKey)
-		id, err := client.CreateRecord(domain, porkbun.CreateRecordRequest{
-			Name:    subdomain,
-			Type:    "TXT",
-			Content: text,
-		})
-		if err != nil {
-			fmt.Println(theme.Fail.Render(fmt.Sprintf("Error creating TXT record: %v", err)))
-			os.Exit(1)
-		}
-
-		fmt.Println(theme.Pass.Render(fmt.Sprintf("Successfully created TXT record for %s.%s with value %s (ID: %s)", subdomain, domain, text, id)))
-	},
-}
-
-func init() {
-	rootCmd.AddCommand(addTxtCmd)
+  # Add a site verification record to the root domain
+  steamer add-txt example.com "" "google-site-verification=abc123xyz"`,
+	})
 }

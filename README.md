@@ -6,12 +6,12 @@ Whether you're delegating a subdomain with `NS` records, adding a `CNAME` for a 
 
 ## ✨ Features
 
-- **🚀 Quick DNS Management:** Create `A`, `AAAA`, `CNAME`, `NS` (subdomain delegation), and `TXT` records, or delete records (`rm`) in a single line.
+- **🚀 Quick DNS Management:** Create `A`, `AAAA`, `CNAME`, `NS` (subdomain delegation), and `TXT` records, or safely delete records (`rm`) with interactive confirmation (`--yes` for automation).
 - **🔍 Domain Search & TLD Pricing:** Check domain availability across multiple TLDs (`search`) and browse cached TLD pricing (`list-tlds`).
 - **📧 Email Forwarding:** List, add, and remove Porkbun email forwarding rules (`email list`, `email add`, `email rm`).
-- **🤖 Agent-Friendly Output:** Supports `--json` flags for deterministic scripting and AI agent workflows.
+- **🤖 Agent-Friendly Output:** Supports `--json` flags across query and mutation commands for deterministic scripting and AI agent workflows.
 - **🎮 Interactive TUI:** A terminal interface to browse your domains, DNS records, and TLD pricing tables.
-- **🔐 Secure Config:** Supports XDG-style configuration, `.env` files, and environment variables.
+- **🔐 Secure Config:** Supports XDG-style configuration, environment variables, and `.env` fallback with config permission warnings.
 - **📖 API Reference:** Includes a local copy of the Porkbun v3 API documentation.
 
 ## 🛠️ Installation
@@ -35,25 +35,25 @@ go install .
 **steamer** looks for your Porkbun API credentials in several places. You'll need an API Key and Secret from [Porkbun](https://porkbun.com/account/api).
 
 ### 1. The Pro Way (Config File)
-Create a config file at `~/.config/steamer/config.yaml`:
+Create a config file at `~/.config/steamer/config.yaml` (recommended permissions `chmod 600 ~/.config/steamer/config.yaml`):
 
 ```yaml
 apikey: pk1_your_api_key
 secretapikey: sk1_your_secret_key
 ```
 
-### 2. The Dev Way (.env)
-Create a `.env` file in your project root:
+### 2. The Quick Way (Environment Variables)
+```bash
+export PORKBUN_APIKEY=pk1_...
+export PORKBUN_SECRETAPIKEY=sk1_...
+```
+
+### 3. The Dev Way (.env Fallback)
+If credentials are not provided by a config file or environment variables, **steamer** falls back to a `.env` file in the current directory:
 
 ```env
 API_KEY=pk1_your_api_key
 API_SECRET=sk1_your_secret_key
-```
-
-### 3. The Quick Way (Environment Variables)
-```bash
-export PORKBUN_APIKEY=pk1_...
-export PORKBUN_SECRETAPIKEY=sk1_...
 ```
 
 ## 🚀 Usage
@@ -66,7 +66,7 @@ Just run `steamer tui` and enjoy the ride. Use `j`/`k` to navigate and `enter` t
 steamer tui
 
 # Jump straight to a domain
-steamer tui -d aaie.cloud
+steamer tui -d example.com
 ```
 
 ### Command Line Interface
@@ -88,42 +88,44 @@ steamer list-domains
 steamer list-domains --json
 
 # See DNS records for a specific domain (add --json for scripting)
-steamer list-records aaie.cloud
-steamer list-records aaie.cloud --json
+steamer list-records example.com
+steamer list-records example.com --json
 ```
 
 #### DNS Record Management
 ```bash
 # Add an A record (use "" for the root domain)
-steamer add-a aaie.cloud home 1.2.3.4
+steamer add-a example.com home 192.0.2.1
 
 # Add an AAAA record
-steamer add-aaaa aaie.cloud home 2001:db8::1
+steamer add-aaaa example.com home 2001:db8::1
 
 # Add a CNAME in a flash
-steamer add-cname aaie.cloud blog ghs.google.com
+steamer add-cname example.com blog ghs.google.com
 
 # Add an NS record for subdomain delegation (supports --json)
-steamer add-ns aaie.cloud int ns-cloud-b1.googledomains.com
-steamer add-ns aaie.cloud int ns-cloud-b2.googledomains.com --json
+steamer add-ns example.com int ns-cloud-b1.googledomains.com
+steamer add-ns example.com int ns-cloud-b2.googledomains.com --json
 
 # Add a TXT record
-steamer add-txt aaie.cloud _dmarc "v=DMARC1; p=none;"
+steamer add-txt example.com _dmarc "v=DMARC1; p=none;"
 
-# Remove a DNS record by its record ID
-steamer rm aaie.cloud 123456789
+# Remove a DNS record by its record ID (prompts for confirmation; pass --yes to skip)
+steamer rm example.com 123456789
+steamer rm example.com 123456789 --yes
 ```
 
 #### Email Forwarding
 ```bash
 # List email forwards for a domain (supports --json)
-steamer email list chinoy.si
+steamer email list example.com
 
 # Add an email forwarding rule
-steamer email add chinoy.si hello ghchinoy@gmail.com
+steamer email add example.com hello user@example.org
 
-# Remove an email forwarding rule
-steamer email rm chinoy.si hello ghchinoy@gmail.com
+# Remove an email forwarding rule (prompts for confirmation; pass --yes to skip)
+steamer email rm example.com hello user@example.org
+steamer email rm example.com hello user@example.org --yes
 ```
 
 ### 📋 Command Reference
@@ -135,15 +137,15 @@ steamer email rm chinoy.si hello ghchinoy@gmail.com
 | `steamer list-records <domain>` | List all DNS records for a domain | `--json` |
 | `steamer list-tlds` | Browse TLD registration, renewal, and transfer pricing | `--force`, `--json` |
 | `steamer search <query>` | Check domain availability and first-year pricing | `--tlds <list>`, `--json` |
-| `steamer add-a <domain> <sub\|""> <ip>` | Create an IPv4 `A` record | |
-| `steamer add-aaaa <domain> <sub\|""> <ip>` | Create an IPv6 `AAAA` record | |
-| `steamer add-cname <domain> <sub> <target>` | Create a `CNAME` alias record | |
+| `steamer add-a <domain> <sub\|""> <ip>` | Create an IPv4 `A` record | `--json` |
+| `steamer add-aaaa <domain> <sub\|""> <ip>` | Create an IPv6 `AAAA` record | `--json` |
+| `steamer add-cname <domain> <sub> <target>` | Create a `CNAME` alias record | `--json` |
 | `steamer add-ns <domain> <sub> <nameserver>` | Create an `NS` record to delegate a subdomain | `--json` |
-| `steamer add-txt <domain> <sub\|""> <text>` | Create a `TXT` record | |
-| `steamer rm <domain> <record-id>` | Delete a DNS record by ID | |
+| `steamer add-txt <domain> <sub\|""> <text>` | Create a `TXT` record | `--json` |
+| `steamer rm <domain> <record-id>` | Delete a DNS record by ID | `-y, --yes`, `--json` |
 | `steamer email list <domain>` | List configured email forwards and quota usage | `--json` |
-| `steamer email add <domain> <addr> <to>` | Create an email forwarding rule | |
-| `steamer email rm <domain> <addr> <to>` | Remove an email forwarding rule | |
+| `steamer email add <domain> <addr> <to>` | Create an email forwarding rule | `--json` |
+| `steamer email rm <domain> <addr> <to>` | Remove an email forwarding rule | `-y, --yes`, `--json` |
 
 ## 📚 Documentation
 Check out `docs/api_reference.md` for a quick look at the Porkbun V3 API endpoints supported by this tool.

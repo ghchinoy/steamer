@@ -16,6 +16,8 @@
 package cmd
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,9 +25,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
-)
 
-var cfgFile string
+	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
+)
 
 const (
 	// GroupInfo is for commands that retrieve and display data.
@@ -38,113 +41,191 @@ const (
 	GroupEmail = "email"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "steamer",
-	Short: "A CLI for managing Porkbun domains",
-	Long:  `steamer is a CLI tool built with Go, Cobra, and Bubble Tea to manage your Porkbun domains and DNS records.`,
+type cliApp struct {
+	v         *viper.Viper
+	cfgFile   string
+	newClient func() (*porkbun.Client, error)
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
-	err := rootCmd.Execute()
-	if err != nil {
-		os.Exit(1)
+// ExecuteContext runs the root CLI command with the given context.
+func ExecuteContext(ctx context.Context) error {
+	return NewRootCmd().ExecuteContext(ctx)
+}
+
+// NewRootCmd constructs a fresh steamer root command with all subcommands attached.
+func NewRootCmd() *cobra.Command {
+	app := &cliApp{
+		v: viper.New(),
 	}
+	app.newClient = app.defaultClient
+
+	rootCmd := &cobra.Command{
+		Use:           "steamer",
+		Short:         "A CLI for managing Porkbun domains",
+		Long:          `steamer is a CLI tool built with Go, Cobra, and Bubble Tea to manage your Porkbun domains, DNS records, and email forwarding.`,
+		SilenceUsage:  true,
+		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, _ []string) error {
+			return app.initConfig(cmd)
+		},
+	}
+
+	rootCmd.AddGroup(
+		&cobra.Group{ID: GroupInfo, Title: "Information Commands:"},
+		&cobra.Group{ID: GroupManagement, Title: "Record Management Commands:"},
+		&cobra.Group{ID: GroupTUI, Title: "Interactive Commands:"},
+		&cobra.Group{ID: GroupEmail, Title: "Email Forwarding Commands:"},
+	)
+
+	rootCmd.PersistentFlags().StringVar(&app.cfgFile, "config", "", "config file (default is $HOME/.config/steamer/config.yaml)")
+
+	app.v.SetDefault("apikey", "")
+	app.v.SetDefault("secretapikey", "")
+
+	rootCmd.AddCommand(
+		newAddACmd(app),
+		newAddAAAACmd(app),
+		newAddCNAMECmd(app),
+		newAddNSCmd(app),
+		newAddTXTCmd(app),
+		newEmailCmd(app),
+		newListDomainsCmd(app),
+		newListRecordsCmd(app),
+		newListTLDsCmd(app),
+		newRmCmd(app),
+		newSearchCmd(app),
+		newTUICmd(app),
+	)
+
+	return rootCmd
 }
 
-func init() {
-	cobra.OnInitialize(initConfig)
+func (a *cliApp) initConfig(cmd *cobra.Command) error {
+	if err := a.loadConfigFile(); err != nil {
+		return err
+	}
 
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    GroupInfo,
-		Title: "Information Commands:",
-	})
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    GroupManagement,
-		Title: "Record Management Commands:",
-	})
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    GroupTUI,
-		Title: "Interactive Commands:",
-	})
-	rootCmd.AddGroup(&cobra.Group{
-		ID:    GroupEmail,
-		Title: "Email Forwarding Commands:",
-	})
+	if used := a.v.ConfigFileUsed(); used != "" {
+		warnIfConfigPermsTooOpen(cmd, used)
+	}
 
-	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/steamer/config.yaml)")
+	a.v.SetEnvPrefix("PORKBUN")
+	a.v.AutomaticEnv()
+	a.applyFallbackEnv()
 
-	viper.SetDefault("apikey", "")
-	viper.SetDefault("secretapikey", "")
+	// Only fall back to CWD .env if credentials are not already provided via
+	// config file or shell environment variables.
+	if a.resolveAPIKey() == "" || a.resolveSecretKey() == "" {
+		if err := godotenv.Load(); err == nil {
+			a.applyFallbackEnv()
+		}
+	}
+
+	return nil
 }
 
-func initConfig() {
-	// 1. Try loading .env file
-	_ = godotenv.Load()
+func (a *cliApp) loadConfigFile() error {
+	if a.cfgFile != "" {
+		a.v.SetConfigFile(a.cfgFile)
+		if err := a.v.ReadInConfig(); err != nil {
+			return fmt.Errorf("reading config file %q: %w", a.cfgFile, err)
+		}
+		return nil
+	}
 
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		// 2. Setup XDG-style config path
-		home, _ := os.UserHomeDir()
-
+	home, err := os.UserHomeDir()
+	if err == nil {
 		// Priority 1: ~/.config/steamer (XDG standard, common on macOS for CLI)
-		viper.AddConfigPath(filepath.Join(home, ".config", "steamer"))
-
-		// Priority 2: ~/Library/Application Support/steamer (macOS standard)
-		configHome, err := os.UserConfigDir()
-		if err == nil {
-			viper.AddConfigPath(filepath.Join(configHome, "steamer"))
-		}
-
-		// Priority 3: $HOME (Legacy/simple)
-		viper.AddConfigPath(home)
-
-		viper.SetConfigType("yaml")
-
-		// Try 'config' first (idiomatic), then 'steamer' (fallback)
-		viper.SetConfigName("config")
-		if err := viper.ReadInConfig(); err != nil {
-			viper.SetConfigName("steamer")
-		}
+		a.v.AddConfigPath(filepath.Join(home, ".config", "steamer"))
 	}
 
-	viper.AutomaticEnv()
-	viper.SetEnvPrefix("PORKBUN")
-
-	// Map .env style names to our viper keys if they aren't already set
-	if v := os.Getenv("API_KEY"); v != "" && viper.GetString("apikey") == "" {
-		viper.Set("apikey", v)
-	}
-	if v := os.Getenv("API_SECRET"); v != "" && viper.GetString("secretapikey") == "" {
-		viper.Set("secretapikey", v)
+	// Priority 2: ~/Library/Application Support/steamer (macOS standard)
+	if configHome, cfgErr := os.UserConfigDir(); cfgErr == nil {
+		a.v.AddConfigPath(filepath.Join(configHome, "steamer"))
 	}
 
-	// Final attempt to read if it wasn't 'config' and we switched to 'steamer'
-	_ = viper.ReadInConfig()
+	if err == nil {
+		// Priority 3: $HOME (legacy/simple)
+		a.v.AddConfigPath(home)
+	}
+
+	a.v.SetConfigType("yaml")
+	a.v.SetConfigName("config")
+	err = a.v.ReadInConfig()
+	if err == nil {
+		return nil
+	}
+	if !isConfigNotFound(err) {
+		return fmt.Errorf("reading config file: %w", err)
+	}
+
+	a.v.SetConfigName("steamer")
+	if err := a.v.ReadInConfig(); err != nil && !isConfigNotFound(err) {
+		return fmt.Errorf("reading config file: %w", err)
+	}
+	return nil
 }
 
-func getClientConfig() (string, string, error) {
-	apiKey := viper.GetString("apikey")
-	if apiKey == "" {
-		apiKey = viper.GetString("api_key")
-	}
+func isConfigNotFound(err error) bool {
+	var notFound viper.ConfigFileNotFoundError
+	return errors.As(err, &notFound)
+}
 
-	secretKey := viper.GetString("secretapikey")
-	if secretKey == "" {
-		secretKey = viper.GetString("api_secret")
+func warnIfConfigPermsTooOpen(cmd *cobra.Command, path string) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return
 	}
-	if secretKey == "" {
-		secretKey = viper.GetString("apisecret")
+	if info.Mode().Perm()&0o077 != 0 {
+		_, _ = fmt.Fprintf(cmd.ErrOrStderr(), "%s\n", theme.Warn.Render(fmt.Sprintf(
+			"Warning: config file %q has permissions %04o; consider running: chmod 600 %s",
+			path, info.Mode().Perm(), path,
+		)))
 	}
-	if secretKey == "" {
-		secretKey = viper.GetString("secretkey")
+}
+
+func (a *cliApp) applyFallbackEnv() {
+	if v := os.Getenv("API_KEY"); v != "" && a.v.GetString("apikey") == "" {
+		a.v.Set("apikey", v)
 	}
+	if v := os.Getenv("API_SECRET"); v != "" && a.v.GetString("secretapikey") == "" {
+		a.v.Set("secretapikey", v)
+	}
+}
+
+func (a *cliApp) resolveAPIKey() string {
+	for _, key := range []string{"apikey", "api_key"} {
+		if val := a.v.GetString(key); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+func (a *cliApp) resolveSecretKey() string {
+	for _, key := range []string{"secretapikey", "api_secret", "apisecret", "secretkey"} {
+		if val := a.v.GetString(key); val != "" {
+			return val
+		}
+	}
+	return ""
+}
+
+func (a *cliApp) loadClientConfig() (string, string, error) {
+	apiKey := a.resolveAPIKey()
+	secretKey := a.resolveSecretKey()
 
 	if apiKey == "" || secretKey == "" {
-		return "", "", fmt.Errorf("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables - hint: create a config file at ~/.config/steamer/config.yaml or set PORKBUN_APIKEY and PORKBUN_SECRETAPIKEY environment variables")
+		return "", "", errors.New("porkbun API key and secret must be provided via config file (~/.config/steamer/config.yaml), .env, or environment variables - hint: create a config file at ~/.config/steamer/config.yaml or set PORKBUN_APIKEY and PORKBUN_SECRETAPIKEY environment variables")
 	}
 
 	return apiKey, secretKey, nil
+}
+
+func (a *cliApp) defaultClient() (*porkbun.Client, error) {
+	apiKey, secretKey, err := a.loadClientConfig()
+	if err != nil {
+		return nil, err
+	}
+	return porkbun.NewClient(apiKey, secretKey), nil
 }

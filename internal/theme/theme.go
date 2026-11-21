@@ -38,4 +38,25 @@ var (
 
 	// ID is used for identifiers like TaskIDs or unique Record IDs.
 	ID = lipgloss.NewStyle().Foreground(lipgloss.AdaptiveColor{Light: "#46ba94", Dark: "#95e6cb"})
+
+	// Title is used for TUI banner headers.
+	Title = lipgloss.NewStyle().
+		Bold(true).
+		Foreground(lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#0b0e14"}).
+		Background(lipgloss.AdaptiveColor{Light: "#399ee6", Dark: "#59c2ff"}).
+		Padding(0, 1)
+
+	// Selected is used for active cursor rows in interactive lists.
+	Selected = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#399ee6", Dark: "#59c2ff"}).
+			Bold(true)
+
+	// TableHeaderBorder is the border color used for TUI table headers.
+	TableHeaderBorder = lipgloss.AdaptiveColor{Light: "#828c99", Dark: "#6c7680"}
+
+	// TableSelected is used for highlighted rows in TUI tables.
+	TableSelected = lipgloss.NewStyle().
+			Foreground(lipgloss.AdaptiveColor{Light: "#ffffff", Dark: "#0b0e14"}).
+			Background(lipgloss.AdaptiveColor{Light: "#399ee6", Dark: "#59c2ff"}).
+			Bold(false)
 )

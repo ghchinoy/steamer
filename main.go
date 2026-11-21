@@ -12,11 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package main is the entry point for the steamer CLI.
+// A CLI tool for managing Porkbun domains, DNS records, and email forwarding.
 package main
 
-import "github.com/ghchinoy/steamer/cmd"
+import (
+	"context"
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/ghchinoy/steamer/cmd"
+	"github.com/ghchinoy/steamer/internal/theme"
+)
 
 func main() {
-	cmd.Execute()
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := cmd.ExecuteContext(ctx); err != nil {
+		fmt.Fprintln(os.Stderr, theme.Fail.Render(fmt.Sprintf("Error: %v", err)))
+		os.Exit(1)
+	}
 }

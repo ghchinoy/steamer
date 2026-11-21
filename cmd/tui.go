@@ -15,46 +15,47 @@
 package cmd
 
 import (
+	"context"
 	"fmt"
-	"os"
-
-	"github.com/ghchinoy/steamer/internal/porkbun"
-	"github.com/ghchinoy/steamer/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/spf13/cobra"
+
+	"github.com/ghchinoy/steamer/internal/tui"
 )
 
-var domainFlag string
+func newTUICmd(app *cliApp) *cobra.Command {
+	var domainFlag string
 
-var tuiCmd = &cobra.Command{
-	Use:     "tui",
-	Short:   "Start the interactive TUI",
-	GroupID: GroupTUI,
-	Long:    `Starts a rich, interactive terminal UI built with Bubble Tea. Use the TUI to visually browse your domains and inspect their DNS records without needing to run separate commands.`,
-	Example: `  # Start the default TUI
+	cmd := &cobra.Command{
+		Use:     "tui",
+		Short:   "Start the interactive TUI",
+		GroupID: GroupTUI,
+		Long:    `Starts a rich, interactive terminal UI built with Bubble Tea. Use the TUI to visually browse your domains and inspect their DNS records without needing to run separate commands.`,
+		Example: `  # Start the default TUI
   steamer tui
 
   # Start the TUI directly focused on a specific domain
-  steamer tui -d aaie.cloud`,
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+  steamer tui -d example.com`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, err := app.newClient()
+			if err != nil {
+				return err
+			}
 
-		client := porkbun.NewClient(apiKey, secretKey)
+			parentCtx := cmd.Context()
+			newReqCtx := func() (context.Context, context.CancelFunc) {
+				return context.WithTimeout(parentCtx, defaultRequestTimeout)
+			}
 
-		p := tea.NewProgram(tui.NewModel(client, domainFlag))
-		if _, err := p.Run(); err != nil {
-			fmt.Printf("Error running TUI: %v\n", err)
-			os.Exit(1)
-		}
-	},
-}
+			p := tea.NewProgram(tui.NewModel(client, domainFlag, newReqCtx), tea.WithContext(parentCtx))
+			if _, err := p.Run(); err != nil {
+				return fmt.Errorf("running TUI: %w", err)
+			}
+			return nil
+		},
+	}
 
-func init() {
-	tuiCmd.Flags().StringVarP(&domainFlag, "domain", "d", "", "Start with records for a specific domain")
-	rootCmd.AddCommand(tuiCmd)
+	cmd.Flags().StringVarP(&domainFlag, "domain", "d", "", "Start with records for a specific domain")
+	return cmd
 }

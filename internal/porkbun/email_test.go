@@ -17,23 +17,22 @@ package porkbun
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
-func TestGetForwardsResponseUnmarshal(t *testing.T) {
+func TestEmailForwardsResponse_Unmarshal(t *testing.T) {
 	payload := `{
 		"status": "SUCCESS",
-		"domain": "chinoy.si",
+		"domain": "example.com",
 		"forwards": [
 			{
-				"address": "hello@chinoy.si",
-				"forwardTo": "ghchinoy@gmail.com",
+				"address": "hello@example.com",
+				"forwardTo": "alice@example.org",
 				"created": "2026-10-11 20:54:18"
 			},
 			{
-				"address": "abbas@chinoy.si",
-				"forwardTo": "abbaschinoy@gmail.com",
+				"address": "support@example.com",
+				"forwardTo": "bob@example.org",
 				"created": "2026-10-11 20:54:23"
 			}
 		],
@@ -44,57 +43,84 @@ func TestGetForwardsResponseUnmarshal(t *testing.T) {
 		"dnsConfigured": true
 	}`
 
-	var res GetForwardsResponse
+	var res EmailForwardsResponse
 	if err := json.Unmarshal([]byte(payload), &res); err != nil {
-		t.Fatalf("failed to unmarshal GetForwardsResponse: %v", err)
+		t.Fatalf("json.Unmarshal(EmailForwardsResponse) unexpected error: %v", err)
 	}
-	if len(res.Forwards) != 2 {
-		t.Fatalf("expected 2 forwards, got %d", len(res.Forwards))
+	if got, want := len(res.Forwards), 2; got != want {
+		t.Fatalf("len(EmailForwardsResponse.Forwards) = %d, want %d", got, want)
 	}
 	if res.Limits.Used != 2 || res.Limits.Max != 20 {
-		t.Fatalf("unexpected limits: %+v", res.Limits)
+		t.Errorf("EmailForwardsResponse.Limits = %+v, want {Used:2 Max:20}", res.Limits)
 	}
 	if !res.DNSConfigured {
-		t.Fatalf("expected dnsConfigured to be true")
+		t.Errorf("EmailForwardsResponse.DNSConfigured = %v, want true", res.DNSConfigured)
 	}
 }
 
-func TestEmailClientMethods(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+func TestClient_EmailEndpoints(t *testing.T) {
+	var lastAddReq AddForwardRequest
+	var lastDeleteReq DeleteForwardRequest
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		switch r.URL.Path {
-		case "/api/json/v3/email/getForwards/example.com":
+		case "/email/getForwards/example.com":
 			_, _ = w.Write([]byte(`{
 				"status": "SUCCESS",
 				"domain": "example.com",
 				"forwards": [
 					{
 						"address": "info@example.com",
-						"forwardTo": "dest@example.com",
+						"forwardTo": "dest@example.org",
 						"created": "2026-01-01 12:00:00"
 					}
 				],
 				"limits": {"used": 1, "max": 20},
 				"dnsConfigured": true
 			}`))
-		case "/api/json/v3/email/addForward/example.com":
+		case "/email/addForward/example.com":
+			if err := json.NewDecoder(r.Body).Decode(&lastAddReq); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			_, _ = w.Write([]byte(`{"status": "SUCCESS"}`))
-		case "/api/json/v3/email/deleteForward/example.com":
+		case "/email/deleteForward/example.com":
+			if err := json.NewDecoder(r.Body).Decode(&lastDeleteReq); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 			_, _ = w.Write([]byte(`{"status": "SUCCESS"}`))
 		default:
 			http.NotFound(w, r)
 		}
-	}))
-	defer server.Close()
+	})
 
-	// Use custom client pointing to test server
-	client := &Client{
-		APIKey:       "test-key",
-		SecretAPIKey: "test-secret",
-		HTTPClient:   server.Client(),
+	client := newTestClient(handler)
+	ctx := t.Context()
+
+	forwards, err := client.FetchEmailForwards(ctx, "example.com")
+	if err != nil {
+		t.Fatalf("FetchEmailForwards(ctx, %q) unexpected error: %v", "example.com", err)
+	}
+	if got, want := len(forwards.Forwards), 1; got != want {
+		t.Fatalf("len(FetchEmailForwards(ctx, %q).Forwards) = %d, want %d", "example.com", got, want)
+	}
+	if got, want := forwards.Forwards[0].Address, "info@example.com"; got != want {
+		t.Errorf("FetchEmailForwards(ctx, %q).Forwards[0].Address = %q, want %q", "example.com", got, want)
 	}
 
-	// Override baseURL helper via test client isn't directly supported since baseURL is a package const.
-	// But we can test JSON request serialization directly.
-	_ = client
+	if err := client.AddEmailForward(ctx, "example.com", "hello@example.com", "dest@example.org"); err != nil {
+		t.Fatalf("AddEmailForward(ctx, %q, %q, %q) unexpected error: %v", "example.com", "hello@example.com", "dest@example.org", err)
+	}
+	if got, want := lastAddReq.Address, "hello"; got != want {
+		t.Errorf("AddEmailForward normalized Address = %q, want %q", got, want)
+	}
+
+	if err := client.DeleteEmailForward(ctx, "example.com", "hello@example.com", "dest@example.org"); err != nil {
+		t.Fatalf("DeleteEmailForward(ctx, %q, %q, %q) unexpected error: %v", "example.com", "hello@example.com", "dest@example.org", err)
+	}
+	if got, want := lastDeleteReq.Address, "hello"; got != want {
+		t.Errorf("DeleteEmailForward normalized Address = %q, want %q", got, want)
+	}
 }

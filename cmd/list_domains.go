@@ -15,74 +15,68 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
-
-	"github.com/ghchinoy/steamer/internal/porkbun"
-	"github.com/ghchinoy/steamer/internal/theme"
 
 	"github.com/spf13/cobra"
+
+	"github.com/ghchinoy/steamer/internal/theme"
 )
 
-var listDomainsJSON bool
+func newListDomainsCmd(app *cliApp) *cobra.Command {
+	var outputJSON bool
 
-var listDomainsCmd = &cobra.Command{
-	Use:     "list-domains",
-	Short:   "List all domains in your Porkbun account",
-	GroupID: GroupInfo,
-	Long:    `Retrieves and displays a list of all domains associated with your Porkbun account, including their current status and expiration dates.`,
-	Example: `  # List domains in a table
+	cmd := &cobra.Command{
+		Use:     "list-domains",
+		Short:   "List all domains in your Porkbun account",
+		GroupID: GroupInfo,
+		Long:    `Retrieves and displays a list of all domains associated with your Porkbun account, including their current status and expiration dates.`,
+		Example: `  # List domains in a table
   steamer list-domains
 
   # Output domains as JSON for scripting
   steamer list-domains --json`,
-	Run: func(cmd *cobra.Command, args []string) {
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		client := porkbun.NewClient(apiKey, secretKey)
-		domains, err := client.ListDomains()
-		if err != nil {
-			fmt.Printf("Error listing domains: %v\n", err)
-			os.Exit(1)
-		}
-
-		if listDomainsJSON {
-			b, err := json.MarshalIndent(domains, "", "  ")
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, err := app.newClient()
 			if err != nil {
-				fmt.Printf("Error encoding JSON: %v\n", err)
-				os.Exit(1)
+				return err
 			}
-			fmt.Println(string(b))
-			return
-		}
 
-		fmt.Printf("%s %s %s %s\n",
-			theme.Accent.Render(fmt.Sprintf("%-25s", "DOMAIN")),
-			theme.Accent.Render(fmt.Sprintf("%-10s", "STATUS")),
-			theme.Accent.Render(fmt.Sprintf("%-10s", "TLD")),
-			theme.Accent.Render(fmt.Sprintf("%-20s", "EXPIRATION")),
-		)
-		for _, d := range domains {
-			statusColor := theme.Pass
-			if d.Status != "ACTIVE" {
-				statusColor = theme.Warn
+			ctx, cancel := context.WithTimeout(cmd.Context(), defaultRequestTimeout)
+			defer cancel()
+
+			domains, err := client.ListDomains(ctx)
+			if err != nil {
+				return fmt.Errorf("listing domains: %w", err)
 			}
-			fmt.Printf("%s %s %s %s\n",
-				fmt.Sprintf("%-25s", d.Domain),
-				statusColor.Render(fmt.Sprintf("%-10s", d.Status)),
-				theme.Muted.Render(fmt.Sprintf("%-10s", d.TLD)),
-				fmt.Sprintf("%-20s", d.ExpireDate),
+
+			if outputJSON {
+				return printJSON(cmd.OutOrStdout(), domains)
+			}
+
+			out := cmd.OutOrStdout()
+			_, _ = fmt.Fprintf(out, "%s %s %s %s\n",
+				theme.Accent.Render(fmt.Sprintf("%-25s", "DOMAIN")),
+				theme.Accent.Render(fmt.Sprintf("%-10s", "STATUS")),
+				theme.Accent.Render(fmt.Sprintf("%-10s", "TLD")),
+				theme.Accent.Render(fmt.Sprintf("%-20s", "EXPIRATION")),
 			)
-		}
-	},
-}
+			for _, d := range domains {
+				statusColor := theme.Pass
+				if d.Status != "ACTIVE" {
+					statusColor = theme.Warn
+				}
+				_, _ = fmt.Fprintf(out, "%-25s %s %s %-20s\n",
+					d.Domain,
+					statusColor.Render(fmt.Sprintf("%-10s", d.Status)),
+					theme.Muted.Render(fmt.Sprintf("%-10s", d.TLD)),
+					d.ExpireDate,
+				)
+			}
+			return nil
+		},
+	}
 
-func init() {
-	listDomainsCmd.Flags().BoolVar(&listDomainsJSON, "json", false, "Output results in JSON format")
-	rootCmd.AddCommand(listDomainsCmd)
+	cmd.Flags().BoolVar(&outputJSON, "json", false, "Output results in JSON format")
+	return cmd
 }

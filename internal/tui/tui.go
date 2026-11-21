@@ -16,25 +16,21 @@
 package tui
 
 import (
+	"context"
 	"fmt"
-
-	"github.com/ghchinoy/steamer/internal/porkbun"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+
+	"github.com/ghchinoy/steamer/internal/porkbun"
+	"github.com/ghchinoy/steamer/internal/theme"
 )
 
-var (
-	titleStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(lipgloss.Color("#FAFAFA")).
-			Background(lipgloss.Color("#7D56F4")).
-			Padding(0, 1)
-
-	selectedStyle = lipgloss.NewStyle().
-			Foreground(lipgloss.Color("#7D56F4")).
-			Bold(true)
-)
+// DomainClient fetches domains and DNS records for the TUI.
+type DomainClient interface {
+	ListDomains(ctx context.Context) ([]porkbun.Domain, error)
+	RetrieveRecords(ctx context.Context, domain string) ([]porkbun.DNSRecord, error)
+}
 
 type state int
 
@@ -45,25 +41,32 @@ const (
 
 // Model is the Bubble Tea model for the steamer TUI.
 type Model struct {
-	client   *porkbun.Client
-	state    state
-	domains  []porkbun.Domain
-	records  []porkbun.DNSRecord
-	cursor   int
-	selected int
-	err      error
-	loading  bool
-	domain   string // currently viewed domain
+	client     DomainClient
+	newContext func() (context.Context, context.CancelFunc)
+	state      state
+	domains    []porkbun.Domain
+	records    []porkbun.DNSRecord
+	cursor     int
+	selected   int
+	err        error
+	loading    bool
+	domain     string // currently viewed domain
 }
 
 // NewModel creates a new TUI model.
-func NewModel(client *porkbun.Client, initialDomain string) Model {
+func NewModel(client DomainClient, initialDomain string, newContext func() (context.Context, context.CancelFunc)) Model {
+	if newContext == nil {
+		newContext = func() (context.Context, context.CancelFunc) {
+			return context.TODO(), func() {}
+		}
+	}
 	return Model{
-		client:  client,
-		state:   viewDomains,
-		cursor:  0,
-		loading: true,
-		domain:  initialDomain,
+		client:     client,
+		newContext: newContext,
+		state:      viewDomains,
+		cursor:     0,
+		loading:    true,
+		domain:     initialDomain,
 	}
 }
 
@@ -89,7 +92,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "down", "j":
 			if m.state == viewDomains && m.cursor < len(m.domains)-1 {
 				m.cursor++
-			} else if m.state == viewRecords && m.cursor < len(m.records)-1 {
+			}
+			if m.state == viewRecords && m.cursor < len(m.records)-1 {
 				m.cursor++
 			}
 		case "enter":
@@ -127,51 +131,70 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // View renders the TUI.
 func (m Model) View() string {
 	if m.err != nil {
-		return fmt.Sprintf("Error: %v\n\nPress q to quit.", m.err)
+		return theme.Fail.Render(fmt.Sprintf("Error: %v", m.err)) + "\n\nPress q to quit."
 	}
 
 	if m.loading {
-		return "Loading..."
+		return theme.Muted.Render("Loading...")
 	}
-
-	s := titleStyle.Render("STEAMER - Porkbun Manager") + "\n\n"
 
 	if m.state == viewDomains {
-		s += "Your Domains:\n\n"
-		for i, d := range m.domains {
-			cursor := " "
-			if m.cursor == i {
-				cursor = ">"
-				s += selectedStyle.Render(fmt.Sprintf("%s %s", cursor, d.Domain)) + "\n"
-			} else {
-				s += fmt.Sprintf("%s %s", cursor, d.Domain) + "\n"
-			}
-		}
-		s += "\n(j/k: navigate, enter: view records, q: quit)"
-	} else {
-		s += fmt.Sprintf("DNS Records for %s:\n\n", m.domain)
-		s += fmt.Sprintf("%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
-		for i, r := range m.records {
-			line := fmt.Sprintf("%-10v %-25s %-10s %-30s", r.ID, r.Name, r.Type, r.Content)
-			if m.cursor == i {
-				s += selectedStyle.Render("> "+line) + "\n"
-			} else {
-				s += "  " + line + "\n"
-			}
-		}
-		s += "\n(j/k: navigate, esc: back to domains, q: quit)"
+		return m.renderDomainsView()
 	}
-
-	return s
+	return m.renderRecordsView()
 }
 
-// Commands and Messages
-type domainsMsg []porkbun.Domain
-type recordsMsg []porkbun.DNSRecord
-type errorMsg error
+func (m Model) renderDomainsView() string {
+	var b strings.Builder
+	b.WriteString(theme.Title.Render("STEAMER - Porkbun Manager"))
+	b.WriteString("\n\nYour Domains:\n\n")
+
+	for i, d := range m.domains {
+		line := fmt.Sprintf("  %s", d.Domain)
+		if m.cursor == i {
+			line = theme.Selected.Render(fmt.Sprintf("> %s", d.Domain))
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+
+	b.WriteString("\n")
+	b.WriteString(theme.Muted.Render("(j/k: navigate, enter: view records, q: quit)"))
+	return b.String()
+}
+
+func (m Model) renderRecordsView() string {
+	var b strings.Builder
+	b.WriteString(theme.Title.Render("STEAMER - Porkbun Manager"))
+	fmt.Fprintf(&b, "\n\nDNS Records for %s:\n\n", m.domain)
+	fmt.Fprintf(&b, "%-10s %-25s %-10s %-30s\n", "ID", "NAME", "TYPE", "CONTENT")
+
+	for i, r := range m.records {
+		row := fmt.Sprintf("%-10s %-25s %-10s %-30s", string(r.ID), r.Name, r.Type, r.Content)
+		line := "  " + row
+		if m.cursor == i {
+			line = theme.Selected.Render("> " + row)
+		}
+		b.WriteString(line)
+		b.WriteByte('\n')
+	}
+
+	b.WriteString("\n")
+	b.WriteString(theme.Muted.Render("(j/k: navigate, esc: back to domains, q: quit)"))
+	return b.String()
+}
+
+type (
+	domainsMsg []porkbun.Domain
+	recordsMsg []porkbun.DNSRecord
+	errorMsg   error
+)
 
 func (m Model) fetchDomains() tea.Msg {
-	domains, err := m.client.ListDomains()
+	ctx, cancel := m.newContext()
+	defer cancel()
+
+	domains, err := m.client.ListDomains(ctx)
 	if err != nil {
 		return errorMsg(err)
 	}
@@ -180,7 +203,10 @@ func (m Model) fetchDomains() tea.Msg {
 
 func (m Model) fetchRecords(domain string) tea.Cmd {
 	return func() tea.Msg {
-		records, err := m.client.RetrieveRecords(domain)
+		ctx, cancel := m.newContext()
+		defer cancel()
+
+		records, err := m.client.RetrieveRecords(ctx, domain)
 		if err != nil {
 			return errorMsg(err)
 		}

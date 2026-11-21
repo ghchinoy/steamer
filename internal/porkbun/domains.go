@@ -1,6 +1,24 @@
+// Copyright 2026 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package porkbun
 
-import "fmt"
+import (
+	"context"
+	"fmt"
+	"net/url"
+)
 
 // Domain represents a domain registered with Porkbun.
 type Domain struct {
@@ -36,23 +54,6 @@ type ListDomainsResponse struct {
 	Domains []Domain `json:"domains"`
 }
 
-// ListDomains fetches all domains in the user's Porkbun account.
-func (c *Client) ListDomains() ([]Domain, error) {
-	req := ListDomainsRequest{
-		BaseRequest: BaseRequest{
-			APIKey:       c.APIKey,
-			SecretAPIKey: c.SecretAPIKey,
-		},
-		IncludeLabels: "yes",
-	}
-	var res ListDomainsResponse
-	err := c.post("domain/listAll", req, &res)
-	if err != nil {
-		return nil, err
-	}
-	return res.Domains, nil
-}
-
 // DomainPricing is the detailed pricing and availability information.
 type DomainPricing struct {
 	Avail   string `json:"avail"`
@@ -64,21 +65,6 @@ type DomainPricing struct {
 type DomainCheckResponse struct {
 	APIResponse
 	Response DomainPricing `json:"response"`
-}
-
-// CheckDomain checks the availability and pricing of a domain.
-func (c *Client) CheckDomain(domain string) (*DomainCheckResponse, error) {
-	req := BaseRequest{
-		APIKey:       c.APIKey,
-		SecretAPIKey: c.SecretAPIKey,
-	}
-	var res DomainCheckResponse
-	endpoint := fmt.Sprintf("domain/checkDomain/%s", domain)
-	err := c.post(endpoint, req, &res)
-	if err != nil {
-		return nil, err
-	}
-	return &res, nil
 }
 
 // TLDPricing represents the pricing info for a single TLD.
@@ -94,15 +80,45 @@ type PricingResponse struct {
 	Pricing map[string]TLDPricing `json:"pricing"`
 }
 
-// GetPricing retrieves pricing information for all supported TLDs.
-func (c *Client) GetPricing() (*PricingResponse, error) {
-	req := BaseRequest{
-		APIKey:       c.APIKey,
-		SecretAPIKey: c.SecretAPIKey,
+// ListDomains fetches all domains in the user's Porkbun account.
+func (c *Client) ListDomains(ctx context.Context) ([]Domain, error) {
+	req := ListDomainsRequest{
+		BaseRequest:   c.baseRequest(),
+		IncludeLabels: "yes",
 	}
+	var res ListDomainsResponse
+	if err := c.post(ctx, "domain/listAll", req, &res); err != nil {
+		return nil, err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
+		return nil, err
+	}
+	return res.Domains, nil
+}
+
+// CheckDomain checks the availability and pricing of a domain.
+func (c *Client) CheckDomain(ctx context.Context, domain string) (*DomainCheckResponse, error) {
+	if err := validatePathSegment("domain", domain); err != nil {
+		return nil, err
+	}
+	var res DomainCheckResponse
+	endpoint := fmt.Sprintf("domain/checkDomain/%s", url.PathEscape(domain))
+	if err := c.post(ctx, endpoint, c.baseRequest(), &res); err != nil {
+		return nil, err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
+		return nil, err
+	}
+	return &res, nil
+}
+
+// FetchPricing retrieves pricing information for all supported TLDs.
+func (c *Client) FetchPricing(ctx context.Context) (*PricingResponse, error) {
 	var res PricingResponse
-	err := c.post("pricing/get", req, &res)
-	if err != nil {
+	if err := c.post(ctx, "pricing/get", c.baseRequest(), &res); err != nil {
+		return nil, err
+	}
+	if err := checkAPIStatus("api error", res.APIResponse); err != nil {
 		return nil, err
 	}
 	return &res, nil

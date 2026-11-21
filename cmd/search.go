@@ -15,28 +15,38 @@
 package cmd
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/spf13/cobra"
+
 	"github.com/ghchinoy/steamer/internal/porkbun"
 	"github.com/ghchinoy/steamer/internal/theme"
-
-	"github.com/spf13/cobra"
 )
 
-var searchJSON bool
-var searchTlds []string
+var searchRateLimitWait = 10 * time.Second
 
-var searchCmd = &cobra.Command{
-	Use:     "search <domain-or-phrase>",
-	Short:   "Check domain availability and pricing",
-	GroupID: GroupInfo,
-	Args:    cobra.ExactArgs(1),
-	Long:    `Queries the Porkbun API to check if a specific domain is available for registration, and retrieves its first-year pricing if available. If a phrase is provided without a TLD (e.g., 'mynewidea'), it will check a predefined list of popular TLDs or the TLDs specified via the --tlds flag.`,
-	Example: `  # Check if a specific domain is available
+type searchResult struct {
+	Domain   string                       `json:"domain"`
+	Response *porkbun.DomainCheckResponse `json:"response,omitempty"`
+	Error    string                       `json:"error,omitempty"`
+}
+
+func newSearchCmd(app *cliApp) *cobra.Command {
+	var (
+		outputJSON bool
+		searchTLDs []string
+	)
+
+	cmd := &cobra.Command{
+		Use:     "search <domain-or-phrase>",
+		Short:   "Check domain availability and pricing",
+		GroupID: GroupInfo,
+		Args:    cobra.ExactArgs(1),
+		Long:    `Queries the Porkbun API to check if a specific domain is available for registration, and retrieves its first-year pricing if available. If a phrase is provided without a TLD (e.g., 'mynewidea'), it will check a predefined list of popular TLDs or the TLDs specified via the --tlds flag.`,
+		Example: `  # Check if a specific domain is available
   steamer search mynewidea.com
 
   # Search a phrase against default TLDs (.com, .net, .org, .co, .io, .dev)
@@ -47,89 +57,91 @@ var searchCmd = &cobra.Command{
 
   # Check availability and output as JSON
   steamer search mynewidea.com --json`,
-	Run: func(cmd *cobra.Command, args []string) {
-		query := args[0]
-		apiKey, secretKey, err := getClientConfig()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
-
-		client := porkbun.NewClient(apiKey, secretKey)
-
-		// Determine if it's a phrase or a specific domain
-		var domainsToCheck []string
-		if strings.Contains(query, ".") {
-			domainsToCheck = []string{query}
-		} else {
-			for _, tld := range searchTlds {
-				// Strip leading dot if user provided one in the flag (e.g., --tlds .com)
-				cleanTLD := strings.TrimPrefix(tld, ".")
-				domainsToCheck = append(domainsToCheck, fmt.Sprintf("%s.%s", query, cleanTLD))
-			}
-		}
-
-		// Collect results sequentially to respect the 1-check-per-10s rate limit
-		finalResults := make([]struct {
-			Domain string
-			Res    *porkbun.DomainCheckResponse
-			Err    error
-		}, 0, len(domainsToCheck))
-
-		for i, d := range domainsToCheck {
-			if i > 0 {
-				if !searchJSON {
-					fmt.Printf("%s Waiting 10s for Porkbun rate limits...\n", theme.Warn.Render("⏳"))
-				}
-				time.Sleep(10 * time.Second)
-			}
-			res, err := client.CheckDomain(d)
-			finalResults = append(finalResults, struct {
-				Domain string
-				Res    *porkbun.DomainCheckResponse
-				Err    error
-			}{Domain: d, Res: res, Err: err})
-		}
-
-		if searchJSON {
-			b, err := json.MarshalIndent(finalResults, "", "  ")
+		RunE: func(cmd *cobra.Command, args []string) error {
+			client, err := app.newClient()
 			if err != nil {
-				fmt.Printf("Error encoding JSON: %v\n", err)
-				os.Exit(1)
-			}
-			fmt.Println(string(b))
-			return
-		}
-
-		// Output formatting
-		for _, r := range finalResults {
-			fmt.Printf("%s %s\n", theme.Accent.Render("Domain:"), r.Domain)
-			if r.Err != nil {
-				fmt.Printf("%s %s\n", theme.Fail.Render("Error:"), r.Err.Error())
-				fmt.Println()
-				continue
+				return err
 			}
 
-			if r.Res.Response.Avail == "yes" {
-				fmt.Printf("%s %s\n", theme.Pass.Render("Status:"), "Available")
-				if r.Res.Response.Price != "" {
-					fmt.Printf("%s %s\n", theme.Accent.Render("Price:"), "$"+r.Res.Response.Price)
+			domainsToCheck := expandSearchDomains(args[0], searchTLDs)
+			results := make([]searchResult, 0, len(domainsToCheck))
+			out := cmd.OutOrStdout()
+
+			for i, domain := range domainsToCheck {
+				if i > 0 && searchRateLimitWait > 0 {
+					if !outputJSON {
+						_, _ = fmt.Fprintf(out, "%s Waiting %s for Porkbun rate limits...\n", theme.Warn.Render("⏳"), searchRateLimitWait)
+					}
+					if err := waitWithContext(cmd.Context(), searchRateLimitWait); err != nil {
+						return err
+					}
+				}
+
+				ctx, cancel := context.WithTimeout(cmd.Context(), defaultRequestTimeout)
+				res, checkErr := client.CheckDomain(ctx, domain)
+				cancel()
+
+				item := searchResult{Domain: domain, Response: res}
+				if checkErr != nil {
+					item.Error = checkErr.Error()
+				}
+				results = append(results, item)
+			}
+
+			if outputJSON {
+				return printJSON(out, results)
+			}
+
+			for _, r := range results {
+				_, _ = fmt.Fprintf(out, "%s %s\n", theme.Accent.Render("Domain:"), r.Domain)
+				if r.Error != "" {
+					_, _ = fmt.Fprintf(out, "%s %s\n\n", theme.Fail.Render("Error:"), r.Error)
+					continue
+				}
+
+				if r.Response == nil || r.Response.Response.Avail != "yes" {
+					_, _ = fmt.Fprintf(out, "%s %s\n\n", theme.Fail.Render("Status:"), "Unavailable (Already registered)")
+					continue
+				}
+
+				_, _ = fmt.Fprintf(out, "%s %s\n", theme.Pass.Render("Status:"), "Available")
+				if r.Response.Response.Price != "" {
+					_, _ = fmt.Fprintf(out, "%s %s\n", theme.Accent.Render("Price:"), "$"+r.Response.Response.Price)
 				}
 				isPremium := "No"
-				if r.Res.Response.Premium == "yes" {
+				if r.Response.Response.Premium == "yes" {
 					isPremium = "Yes"
 				}
-				fmt.Printf("%s %s\n", theme.Accent.Render("Premium:"), isPremium)
-			} else {
-				fmt.Printf("%s %s\n", theme.Fail.Render("Status:"), "Unavailable (Already registered)")
+				_, _ = fmt.Fprintf(out, "%s %s\n\n", theme.Accent.Render("Premium:"), isPremium)
 			}
-			fmt.Println()
-		}
-	},
+			return nil
+		},
+	}
+
+	cmd.Flags().BoolVar(&outputJSON, "json", false, "Output results in JSON format")
+	cmd.Flags().StringSliceVar(&searchTLDs, "tlds", []string{"com", "net", "org", "co", "io", "dev"}, "Comma-separated list of TLDs to check when a phrase is provided")
+	return cmd
 }
 
-func init() {
-	searchCmd.Flags().BoolVar(&searchJSON, "json", false, "Output results in JSON format")
-	searchCmd.Flags().StringSliceVar(&searchTlds, "tlds", []string{"com", "net", "org", "co", "io", "dev"}, "Comma-separated list of TLDs to check when a phrase is provided")
-	rootCmd.AddCommand(searchCmd)
+func expandSearchDomains(query string, tlds []string) []string {
+	if strings.Contains(query, ".") {
+		return []string{query}
+	}
+	domains := make([]string, 0, len(tlds))
+	for _, tld := range tlds {
+		cleanTLD := strings.TrimPrefix(tld, ".")
+		domains = append(domains, fmt.Sprintf("%s.%s", query, cleanTLD))
+	}
+	return domains
+}
+
+func waitWithContext(ctx context.Context, d time.Duration) error {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }
