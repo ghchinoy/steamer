@@ -8,9 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-21
+
+### Added
+
+- Managed Porkbun SSL certificate commands: `steamer ssl status <domain>` (inspects issuer, SANs, expiry, chain count, and SHA-256 fingerprint without exposing the private key) and `steamer ssl retrieve <domain>` (atomically writes `fullchain.pem` with mode `0644` and `privkey.pem` with mode `0600`, skipping rewrites when unchanged) `[steamer-g22]`, `[steamer-yg6]`, `[steamer-c0d]`.
+- Porkbun API client support for `/ssl/retrieve/<domain>` (`RetrieveSSLBundle`) and X.509 PEM chain metadata parsing (`ParseCertificateChain`) `[steamer-g22]`.
+
 ### Security
 
-- Upgraded Go module floor to `go 1.27.4` to resolve standard library advisory `GO-2026-6859` in CI and downstream builds.
+- Upgraded Go module floor to `go 1.27.4` to resolve standard library advisory `GO-2026-6859` in CI and downstream builds `[steamer-vnk]`.
+- Scoped `ssl retrieve` atomic PEM writes with `os.OpenRoot` and strict filename validation to prevent path traversal and symlink escapes `[steamer-yg6]`.
 
 ## [0.2.0] - 2026-11-21
 
@@ -57,6 +65,7 @@ _Initial release._
 
 - Aligned `go.mod` module path to `github.com/ghchinoy/steamer` for `go install` compatibility and resolved initial `golangci-lint` issues `[steamer-m6f]`, `[steamer-rcu]`, `[steamer-7ft]`, `[steamer-eew]`, `[steamer-zod]`.
 
-[Unreleased]: https://github.com/ghchinoy/steamer/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/ghchinoy/steamer/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/ghchinoy/steamer/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/ghchinoy/steamer/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/ghchinoy/steamer/releases/tag/v0.1.0

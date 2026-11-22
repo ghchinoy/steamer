@@ -9,6 +9,7 @@ Whether you're delegating a subdomain with `NS` records, adding a `CNAME` for a 
 - **🚀 Quick DNS Management:** Create `A`, `AAAA`, `CNAME`, `NS` (subdomain delegation), and `TXT` records, or safely delete records (`rm`) with interactive confirmation (`--yes` for automation).
 - **🔍 Domain Search & TLD Pricing:** Check domain availability across multiple TLDs (`search`) and browse cached TLD pricing (`list-tlds`).
 - **📧 Email Forwarding:** List, add, and remove Porkbun email forwarding rules (`email list`, `email add`, `email rm`).
+- **🔒 Managed SSL Bundles:** Inspect issuer/SANs/expiry (`ssl status`) and atomically sync auto-renewed wildcard PEM files (`ssl retrieve`) with `0600` private key permissions for hot-reloading TLS services.
 - **🤖 Agent-Friendly Output:** Supports `--json` flags across query and mutation commands for deterministic scripting and AI agent workflows.
 - **🎮 Interactive TUI:** A terminal interface to browse your domains, DNS records, and TLD pricing tables.
 - **🔐 Secure Config:** Supports XDG-style configuration, environment variables, and `.env` fallback with config permission warnings.
@@ -152,6 +153,8 @@ steamer email rm example.com hello user@example.org --yes
 | `steamer email list <domain>` | List configured email forwards and quota usage | `--json` |
 | `steamer email add <domain> <addr> <to>` | Create an email forwarding rule | `--json` |
 | `steamer email rm <domain> <addr> <to>` | Remove an email forwarding rule | `-y, --yes`, `--json` |
+| `steamer ssl status <domain>` | Inspect Porkbun managed SSL issuer, SANs, and expiry | `--json` |
+| `steamer ssl retrieve <domain>` | Atomically save `fullchain.pem` (`0644`) & `privkey.pem` (`0600`) | `--out-dir`, `--cert-file`, `--key-file`, `--json` |
 | `steamer version` | Display steamer version and build metadata | `--json` |
 
 ## 📚 Documentation

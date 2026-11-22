@@ -47,6 +47,8 @@ func TestNewRootCmd_SubcommandsRegistered(t *testing.T) {
 		{"email", "list"},
 		{"email", "add"},
 		{"email", "rm"},
+		{"ssl", "status"},
+		{"ssl", "retrieve"},
 	}
 
 	for _, path := range wantPaths {
@@ -318,6 +320,7 @@ func executeWithMockHandler(t *testing.T, handler http.Handler, stdin *strings.R
 		&cobra.Group{ID: GroupManagement, Title: "Record Management Commands:"},
 		&cobra.Group{ID: GroupTUI, Title: "Interactive Commands:"},
 		&cobra.Group{ID: GroupEmail, Title: "Email Forwarding Commands:"},
+		&cobra.Group{ID: GroupSSL, Title: "SSL Certificate Commands:"},
 	)
 	root.AddCommand(
 		newAddACmd(app),
@@ -331,6 +334,7 @@ func executeWithMockHandler(t *testing.T, handler http.Handler, stdin *strings.R
 		newListTLDsCmd(app),
 		newRmCmd(app),
 		newSearchCmd(app),
+		newSSLCmd(app),
 		newTUICmd(app),
 	)
 

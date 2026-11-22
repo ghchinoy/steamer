@@ -40,6 +40,8 @@ const (
 	GroupTUI = "tui"
 	// GroupEmail is for email forwarding commands.
 	GroupEmail = "email"
+	// GroupSSL is for managed SSL certificate commands.
+	GroupSSL = "ssl"
 )
 
 type cliApp struct {
@@ -77,6 +79,7 @@ func NewRootCmd() *cobra.Command {
 		&cobra.Group{ID: GroupManagement, Title: "Record Management Commands:"},
 		&cobra.Group{ID: GroupTUI, Title: "Interactive Commands:"},
 		&cobra.Group{ID: GroupEmail, Title: "Email Forwarding Commands:"},
+		&cobra.Group{ID: GroupSSL, Title: "SSL Certificate Commands:"},
 	)
 
 	rootCmd.PersistentFlags().StringVar(&app.cfgFile, "config", "", "config file (default is $HOME/.config/steamer/config.yaml)")
@@ -96,6 +99,7 @@ func NewRootCmd() *cobra.Command {
 		newListTLDsCmd(app),
 		newRmCmd(app),
 		newSearchCmd(app),
+		newSSLCmd(app),
 		newTUICmd(app),
 		newVersionCmd(),
 	)
