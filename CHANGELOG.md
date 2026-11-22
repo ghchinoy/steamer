@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Upgraded Go module floor to `go 1.27.4` to resolve standard library advisory `GO-2026-6859` in CI and downstream builds.
+
 ## [0.2.0] - 2026-11-21
 
 ### Added
